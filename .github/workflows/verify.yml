@@ -17,6 +17,8 @@ jobs:
         with:
           node-version: "22"
       - name: Check browser JavaScript syntax
-        run: node --check data.js && node --check engine.js && node --check app.js
+        run: node --check data.js && node --check engine.js && node --check app.js && node --check service-worker.js
+      - name: Validate PWA assets
+        run: node -e "const fs=require('node:fs');const m=JSON.parse(fs.readFileSync('manifest.webmanifest','utf8'));if(m.icons.length<2)throw Error('PWA icons missing');for(const f of ['icon-192.png','icon-512.png'])if(fs.statSync(f).size<1000)throw Error(f+' is invalid')"
       - name: Run engine regression tests
         run: node --test

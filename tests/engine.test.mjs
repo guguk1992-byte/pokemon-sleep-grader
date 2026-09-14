@@ -21,3 +21,21 @@ test("a role-correct Ralts outranks a bad healer",()=>{
 test("representative outputs are finite",()=>{
   for(const id of["GARDEVOIR","TORTERRA","SCEPTILE","MEW","MEWTWO"]){const r=E.analyze(E.defaultConfig(id));assert.ok(Number.isFinite(r.current.topPct),id)}
 });
+test("Mew supports every Almighty main-skill choice from RaenonX",()=>{
+  assert.equal(E.versatileOptions.length,12);
+  assert.equal(new Set(E.versatileOptions.map(x=>x.id)).size,12);
+  const base=E.defaultConfig("MEW");
+  assert.equal(base.versatileSkill,"Metronome");
+  const metronome=E.metrics(base);
+  const healer=E.metrics({...base,versatileSkill:"EnergyForEveryoneS"});
+  const berry=E.metrics({...base,versatileSkill:"BerryBurst"});
+  assert.equal(metronome.role.category,"random");
+  assert.equal(healer.role.category,"healerAll");
+  assert.equal(healer.role.skillName,"기력 올S");
+  assert.equal(berry.role.category,"berrySkill");
+  assert.equal(E.getSkillRate(metronome.pokemon,"Metronome"),4);
+  assert.equal(E.getSkillRate(metronome.pokemon,"EnergyForEveryoneS"),3.37);
+  assert.equal(E.getSkillRate(metronome.pokemon,"BerryBurst"),2.84);
+  assert.ok(metronome.skillProcsDay>healer.skillProcsDay);
+  assert.ok(healer.skillProcsDay>berry.skillProcsDay);
+});

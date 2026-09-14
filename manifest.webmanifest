@@ -1,0 +1,28 @@
+{
+  "id": "./",
+  "name": "포슬립 개체 감정기",
+  "short_name": "포슬립 감정기",
+  "description": "포켓몬 슬립의 성격·식재료·서브스킬을 역할별로 비교하는 개체 감정기",
+  "lang": "ko",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#081221",
+  "theme_color": "#081221",
+  "orientation": "any",
+  "categories": ["games", "utilities"],
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
