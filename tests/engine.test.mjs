@@ -39,3 +39,22 @@ test("Mew supports every Almighty main-skill choice from RaenonX",()=>{
   assert.ok(metronome.skillProcsDay>healer.skillProcsDay);
   assert.ok(healer.skillProcsDay>berry.skillProcsDay);
 });
+test("shortcomings react to nature, subskills, ingredients, and main-skill level",()=>{
+  const base={...E.defaultConfig("RALTS"),level:70,mainSkillLevel:6,natureId:"HARDY",subskills:["HB","STM","HSM","INVL","REB"]};
+  const good=E.analyze(base),goodNotes=E.getInsights(base,good).bad;
+  const badNature={...base,natureId:"NAIVE"},natureNotes=E.getInsights(badNature,E.analyze(badNature)).bad;
+  const badSubs={...base,subskills:["REB","DSB","SEB","ERB","INVS"]},subNotes=E.getInsights(badSubs,E.analyze(badSubs)).bad;
+  const lowSkill={...base,mainSkillLevel:1},skillNotes=E.getInsights(lowSkill,E.analyze(lowSkill)).bad;
+  assert.notDeepEqual(goodNotes,natureNotes);
+  assert.notDeepEqual(goodNotes,subNotes);
+  assert.notDeepEqual(goodNotes,skillNotes);
+  assert.ok(natureNotes.some(x=>x.includes("스킬 확률 하락")));
+  assert.ok(subNotes.some(x=>x.includes("스킬 확률 업")));
+  assert.ok(skillNotes.some(x=>x.includes("실효 메인 스킬")));
+
+  const torterra=E.defaultConfig("TORTERRA"),p=E.getPokemon("TORTERRA"),slot=(p.ingredients["60"]||[]);
+  if(slot.length>1){
+    const a={...torterra,level:80,ingredients:{...torterra.ingredients,"60":slot[0].id}},b={...torterra,level:80,ingredients:{...torterra.ingredients,"60":slot[1].id}};
+    assert.notDeepEqual(E.getInsights(a,E.analyze(a)).bad,E.getInsights(b,E.analyze(b)).bad);
+  }
+});

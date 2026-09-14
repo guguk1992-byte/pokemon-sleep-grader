@@ -50,27 +50,9 @@ function sync(){
 function read(){
  config=sanitize({...config,level:+el.level.value,natureId:el.nature.value,mainSkillLevel:+el.skill.value,versatileSkill:el.versatile.value,subskills:el.subs.map(x=>x.value),ingredients:{"0":el.i0.value,"30":el.i30.value,"60":el.i60.value},ingredientTarget:el.target.value,collectionHours:+el.collect.value,favoriteBerry:el.fav.checked,teamHelpingBonus:+el.team.value});
 }
-function insights(r){
- const a=new Set(r.metrics.activeSubskills),n=nature[config.natureId],good=[],bad=[];
- if(a.has("HB"))good.push("도우미 보너스가 본인과 팀 4마리의 생산성을 함께 올립니다.");
- if(a.has("HSM"))good.push("도우미 스피드 M으로 모든 생산과 스킬 판정이 크게 늘어납니다.");
- if(a.has("BFS")&&(r.pokemon.specialty==="berry"||r.role.category==="berrySkill"))good.push("나무열매 수 S가 이 역할의 핵심 화력을 직접 끌어올립니다.");
- if((a.has("STM")||a.has("STS"))&&(r.pokemon.specialty==="skill"||r.pokemon.specialty==="all"))good.push("스킬 확률 옵션이 메인 스킬 발동을 안정적으로 늘립니다.");
- if((a.has("IFM")||a.has("IFS"))&&r.pokemon.specialty==="ingredient")good.push("식재료 확률 옵션이 식재료 타입의 본업과 정확히 맞습니다.");
- if((a.has("INVL")||a.has("INVM"))&&config.collectionHours>=4&&r.pokemon.specialty!=="berry")good.push("소지수 증가가 장시간 미접속 손실을 줄입니다.");
- if(n.up==="speed")good.push("속도 상승 성격은 거의 모든 역할에서 확실한 가점입니다.");
- if(n.up==="skill"&&(r.pokemon.specialty==="skill"||r.pokemon.specialty==="all"))good.push("스킬 상승 성격이 본업과 맞습니다.");
- if(n.down==="speed")bad.push("속도 하락 성격은 모든 생산과 발동 횟수를 깎는 큰 감점입니다.");
- if(n.down==="skill"&&(r.pokemon.specialty==="skill"||r.pokemon.specialty==="all"))bad.push("스킬 확률 하락 성격은 본업을 직접 망가뜨립니다.");
- if(n.down==="ingredient"&&r.pokemon.specialty==="ingredient")bad.push("식재료 확률 하락 성격이라 식재료형으로서는 치명적입니다.");
- if(a.has("BFS")&&r.pokemon.specialty==="ingredient"&&config.collectionHours>=8)bad.push("나무열매 수 S가 소지품을 빨리 채워 밤샘 식재료 생산을 방해할 수 있습니다.");
- if(["REB","DSB","SEB"].filter(x=>a.has(x)).length>=2)bad.push("현재 열린 칸에 직접 성능을 올리지 않는 보너스가 많습니다.");
- if(r.metrics.reliability<.82)bad.push("수확 주기에 비해 소지수가 부족해 방치 효율이 떨어집니다.");
- if(!good.length)good.push("치명적 결함은 없지만 본업을 강하게 미는 조합도 뚜렷하지 않습니다.");if(!bad.length)bad.push("현재 레벨 기준으로 눈에 띄는 치명적 감점은 없습니다.");return{good:good.slice(0,4),bad:bad.slice(0,4)};
-}
 function meter(name,v,t){return'<div class="meter-row"><div class="meter-copy"><span>'+esc(name)+'</span><strong>'+Math.round(v)+'</strong></div><div class="meter"><i class="'+t+'" style="width:'+Math.max(4,Math.min(100,v/1.6))+'%"></i></div></div>'}
 function render(r){
- const pct=r.current.topPct,q=100-pct,idx=r.current.indices,ins=insights(r),basis=r.species.basisPokemon.id!==r.pokemon.id?r.species.basisPokemon.ko+" 진화 후 기준":r.pokemon.ko+" 기준",names=r.metrics.activeSubskills.map(x=>sub[x].ko),ings=r.futureMetrics.chosenIngredients.map(x=>(D.ingredients[x.id]?.ko||x.id)+"×"+x.amount),sg=E.gradeFromTop(r.species.topPct),line=r.ingredientLine.combinations<=1?"고정":fTop(r.ingredientLine.topPct),core=r.pokemon.specialty==="berry"?"나무열매 본업":r.pokemon.specialty==="ingredient"?"식재료 본업":r.role.label+" 본업",versatileLine=r.pokemon.skill==="Versatile"?'<p><strong>올마이티 메인 스킬:</strong> '+esc(r.role.skillName)+'</p>':"";
+ const pct=r.current.topPct,q=100-pct,idx=r.current.indices,ins=E.getInsights(config,r),basis=r.species.basisPokemon.id!==r.pokemon.id?r.species.basisPokemon.ko+" 진화 후 기준":r.pokemon.ko+" 기준",names=r.metrics.activeSubskills.map(x=>sub[x].ko),ings=r.futureMetrics.chosenIngredients.map(x=>(D.ingredients[x.id]?.ko||x.id)+"×"+x.amount),sg=E.gradeFromTop(r.species.topPct),line=r.ingredientLine.combinations<=1?"고정":fTop(r.ingredientLine.topPct),core=r.pokemon.specialty==="berry"?"나무열매 본업":r.pokemon.specialty==="ingredient"?"식재료 본업":r.role.label+" 본업",versatileLine=r.pokemon.skill==="Versatile"?'<p><strong>올마이티 메인 스킬:</strong> '+esc(r.role.skillName)+'</p>':"";
  el.result.innerHTML='<div class="result-hero"><div class="grade-ring grade-'+r.current.grade.replace("+","p")+'" style="--grade-angle:'+(q*3.6)+'deg"><div><span>'+r.current.grade+'</span><small>ROLE GRADE</small></div></div><div class="result-summary"><span class="eyebrow">동일 포켓몬 조합 대비</span><h2>'+fTop(pct)+'</h2><p><strong>'+esc(r.verdict.title)+'.</strong> '+esc(r.verdict.text)+'</p></div></div>'+
  '<div class="rank-strip"><div><span>현재 Lv.'+config.level+'</span><strong>'+r.current.grade+" · "+fTop(r.current.topPct)+'</strong></div><div><span>완성형 Lv.80</span><strong>'+r.future.grade+" · "+fTop(r.future.topPct)+'</strong></div><div><span>식재료 구성</span><strong>'+line+'</strong></div></div>'+
  '<section class="result-section"><div class="section-title"><div><span class="eyebrow">PERFORMANCE</span><h3>어디서 점수를 얻었나</h3></div><span class="sample-note">3.2만 조합 추정</span></div>'+meter(core,idx.core,"mint")+meter("전체 역할 점수",idx.overall,"violet")+meter("팀 기여 지수",idx.team,"amber")+

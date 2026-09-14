@@ -114,7 +114,87 @@ function finalMon(p){if(!p||p.remainingEvolutions===0)return p;const i=p.ingredi
 function scalar(m,s,c){if(s==="berry")return m.berryStrengthDay+m.ingredientStrengthDay*.08;if(s==="ingredient")return m.ingredientStrengthDay+m.berryStrengthDay*.08;if(s==="all")return m.berryStrengthDay+m.ingredientStrengthDay+m.skillOutput*6000;if(c==="berrySkill")return m.skillOutput*.68+m.berryStrengthDay/15000*.32;if(c==="ingredientSkill")return m.skillOutput*.72+m.ingredientStrengthDay/12000*.28;return m.skillOutput}
 function speciesRank(c){const entered=mon(c.pokemonId),p=finalMon(entered),r=role(p,c.versatileSkill),group=D.pokemon.filter(x=>x.remainingEvolutions===0&&x.specialty===p.specialty&&((p.specialty!=="skill"&&p.specialty!=="all")||role(x,c.versatileSkill).category===r.category));const val=x=>{const z={...c,pokemonId:x.id,natureId:"HARDY",subskills:filler(),ingredients:defaultIngredients(x)};return scalar(metrics(z),x.specialty,role(x,c.versatileSkill).category)},a=group.map(val).sort((x,y)=>x-y),v=val(p),lo=lower(a,v-1e-9),hi=upper(a,v+1e-9),top=a.length<=1?50:((a.length-hi)+(hi-lo)*.5)/a.length*100;return{topPct:clamp(top,.1,99.9),count:a.length,basisPokemon:p,role:r}}
 function verdict(x){return x<=1?{title:"종결급",text:"더 좋은 개체를 기다릴 이유가 거의 없습니다. 바로 투자해도 됩니다."}:x<=5?{title:"최상급",text:"메인 스킬 씨앗까지 투자할 가치가 높은 개체입니다."}:x<=12?{title:"상급",text:"본업 핵심 옵션이 잘 모였습니다. 적극 육성권입니다."}:x<=22?{title:"준수한 상급",text:"실전에서 오래 쓸 수 있습니다. 역할에 맞으면 투자해도 좋습니다."}:x<=35?{title:"쓸 만함",text:"분명 평균 이상이지만 종결 개체는 아닙니다. 자원이 넉넉하면 육성하세요."}:x<=50?{title:"평균 이상",text:"당장 쓸 수는 있으나 비싼 씨앗 투자는 한 번 더 생각하는 편이 낫습니다."}:x<=65?{title:"평범함",text:"임시 사용은 가능하지만 장기 투자 대상으로는 애매합니다."}:x<=80?{title:"아쉬움",text:"본업 옵션이 부족합니다. 대체 개체를 계속 찾는 편이 좋습니다."}:{title:"교체 후보",text:"솔직히 고투자는 손해에 가깝습니다. 최소 투자로만 쓰세요."}}
+const subName=id=>D.subskills.find(x=>x.id===id)?.ko||id;
+const ingredientName=id=>D.ingredients[id]?.ko||id;
+const gainPct=(base,next)=>base?Math.max(0,(next/base-1)*100):0;
+function bestNatureChange(c){
+ const sc=scorer(c),base=sc.score(c);let best={id:c.natureId,value:base};
+ D.natures.forEach(x=>{const value=sc.score({...c,natureId:x.id});if(value>best.value)best={id:x.id,value}});
+ return{...best,gain:gainPct(base,best.value)};
+}
+function bestSubskillChange(c,level){
+ const x={...c,level},sc=scorer(x),base=sc.score(x),selected=(c.subskills||[]).slice(0,5),count=activeCount(level);let best=null;
+ for(let slot=0;slot<count;slot++)for(const candidate of D.subskills){
+  if(candidate.id===selected[slot]||selected.includes(candidate.id))continue;
+  const next=selected.slice();next[slot]=candidate.id;const value=sc.score({...x,subskills:next});
+  if(!best||value>best.value)best={slot,from:selected[slot],to:candidate.id,value};
+ }
+ return best?{...best,gain:gainPct(base,best.value),level:D.unlocks[best.slot]}:null;
+}
+function bestIngredientChange(c){
+ const p=mon(c.pokemonId),x={...c,level:80},sc=scorer(x),base=sc.score(x),selected={...defaultIngredients(p),...(c.ingredients||{})};let best=null;
+ for(const key of["0","30","60"])for(const candidate of p.ingredients[key]||[]){
+  if(candidate.id===selected[key])continue;
+  const value=sc.score({...x,ingredients:{...selected,[key]:candidate.id}});
+  if(!best||value>best.value)best={key,from:selected[key],to:candidate.id,value};
+ }
+ return best?{...best,gain:gainPct(base,best.value),level:best.key==="0"?1:+best.key}:null;
+}
+function insights(c,report){
+ const p=mon(c.pokemonId);if(!p)throw Error("포켓몬을 찾을 수 없습니다.");
+ const r=report||analyze(c),m=r.metrics,n=nat(c.natureId),active=new Set(m.activeSubskills),selected=(c.subskills||[]).slice(0,5),good=[],issues=[];
+ const skillFocused=p.specialty==="skill"||p.specialty==="all",add=(priority,key,text)=>{if(!issues.some(x=>x.key===key))issues.push({priority,key,text})};
+ if(active.has("HB"))good.push("도우미 보너스가 본인과 팀 4마리의 생산성을 함께 올립니다.");
+ if(active.has("HSM"))good.push("도우미 스피드 M으로 모든 생산과 스킬 판정이 크게 늘어납니다.");
+ if(active.has("BFS")&&(p.specialty==="berry"||r.role.category==="berrySkill"))good.push("나무열매 수 S가 이 역할의 핵심 화력을 직접 끌어올립니다.");
+ if((active.has("STM")||active.has("STS"))&&skillFocused)good.push("스킬 확률 옵션이 메인 스킬 발동을 안정적으로 늘립니다.");
+ if((active.has("IFM")||active.has("IFS"))&&p.specialty==="ingredient")good.push("식재료 확률 옵션이 식재료 타입의 본업과 정확히 맞습니다.");
+ if((active.has("INVL")||active.has("INVM"))&&+c.collectionHours>=4&&p.specialty!=="berry")good.push("소지수 증가가 장시간 미접속 손실을 줄입니다.");
+ if(n.up==="speed")good.push("속도 상승 성격은 거의 모든 역할에서 확실한 가점입니다.");
+ if(n.up==="skill"&&skillFocused)good.push("스킬 상승 성격이 본업과 맞습니다.");
+ if(n.up==="ingredient"&&p.specialty==="ingredient")good.push("식재료 상승 성격이 식재료 생산량을 직접 높입니다.");
+ if(n.up==="neutral")good.push("무보정 성격이라 본업을 직접 깎는 성격 감점은 없습니다.");
+ if(m.effectiveSkillLevel>=7&&skillFocused)good.push("실효 메인 스킬이 최대 Lv.7이라 1회 발동 효과를 온전히 냅니다.");
+
+ let harmfulNature=false;
+ if(n.down==="speed"){add(100,"nature","속도 하락 성격은 모든 생산과 발동 횟수를 깎는 큰 감점입니다.");harmfulNature=true}
+ else if(n.down==="skill"&&skillFocused){add(98,"nature","스킬 확률 하락 성격은 이 포켓몬의 본업을 직접 망가뜨립니다.");harmfulNature=true}
+ else if(n.down==="ingredient"&&p.specialty==="ingredient"){add(98,"nature","식재료 확률 하락 성격이라 식재료형으로서는 치명적입니다.");harmfulNature=true}
+ else if(n.down==="energy"){add(62,"nature-energy","기운 회복 하락 성격은 하루 도움 횟수의 안정성을 조금 낮춥니다.");harmfulNature=true}
+ else if(n.down==="exp")add(38,"nature-exp","EXP 하락 성격은 완성 성능을 깎지는 않지만 육성 시간이 더 듭니다.");
+
+ const coreGap=(ids,key,label,priority)=>{
+  if(ids.some(id=>active.has(id)))return;
+  const slot=selected.findIndex(id=>ids.includes(id));
+  if(slot>=0&&D.unlocks[slot]>c.level)add(priority,key,label+"이 Lv."+D.unlocks[slot]+"에 있어 현재는 아직 적용되지 않습니다.");
+  else add(priority,key,"현재 열린 서브스킬에 "+label+"이 없어 본업 상한이 낮습니다.");
+ };
+ if(c.level<10)add(90,"locked-all","Lv.10 전이라 서브스킬 보정이 아직 하나도 적용되지 않습니다.");
+ else{
+  if(p.specialty==="berry")coreGap(["BFS"],"core-berry","나무열매 수 S",88);
+  if(p.specialty==="ingredient")coreGap(["IFM","IFS"],"core-ingredient","식재료 확률 업",86);
+  if(skillFocused)coreGap(["STM","STS"],"core-skill","스킬 확률 업",90);
+  coreGap(["HSM","HSS","HB"],"core-speed","속도 보정",72);
+ }
+ if(skillFocused&&m.effectiveSkillLevel<7)add(78-m.effectiveSkillLevel*2,"skill-level","실효 메인 스킬이 Lv."+m.effectiveSkillLevel+"이라 Lv.7 대비 1회 발동 효과가 낮습니다.");
+ if(active.has("BFS")&&p.specialty==="ingredient"&&+c.collectionHours>=8)add(82,"bfs-inventory","나무열매 수 S가 소지품을 빨리 채워 밤샘 식재료 생산을 방해할 수 있습니다.");
+ if(["REB","DSB","SEB"].filter(x=>active.has(x)).length>=2)add(70,"indirect","현재 열린 칸에 직접 성능을 올리지 않는 보너스가 많습니다.");
+ if(m.reliability<.95)add(70+(1-m.reliability)*50,"inventory","약 "+m.fillHours.toFixed(1)+"시간이면 소지품이 차서 설정한 "+c.collectionHours+"시간 수확 주기에서 효율이 "+Math.round(m.reliability*100)+"%까지 떨어집니다.");
+ if(p.specialty==="ingredient"&&r.ingredientLine.combinations>1&&r.ingredientLine.topPct>50)add(58,"ingredient-line","식재료 구성만 비교하면 상위 "+r.ingredientLine.topPct.toFixed(1)+"%로, 같은 종의 좋은 식재료 조합보다 불리합니다.");
+
+ if(!harmfulNature){const change=bestNatureChange(c),best=nat(change.id);if(change.id!==c.natureId&&change.gain>=1)add(60+Math.min(20,change.gain),"nature-opportunity",n.ko+" 성격보다 "+best.ko+" 성격이면 현재 역할 점수가 약 "+change.gain.toFixed(1)+"% 높습니다.")}
+ const currentSwap=bestSubskillChange(c,c.level),futureSwap=c.level<80?bestSubskillChange(c,80):currentSwap;
+ const swap=[currentSwap,futureSwap].filter(Boolean).sort((x,y)=>y.gain-x.gain)[0];
+ if(swap&&swap.gain>=1)add(64+Math.min(18,swap.gain),"subskill-swap","Lv."+swap.level+"의 "+subName(swap.from)+" 대신 "+subName(swap.to)+"이면 "+(swap.level>c.level?"Lv.80 ":"현재 ")+"역할 점수가 약 "+swap.gain.toFixed(1)+"% 높습니다.");
+ const ingredientSwap=bestIngredientChange(c);
+ if(ingredientSwap&&ingredientSwap.gain>=1&&(p.specialty==="ingredient"||c.ingredientTarget))add(54+Math.min(16,ingredientSwap.gain),"ingredient-swap","Lv."+ingredientSwap.level+" 식재료를 "+ingredientName(ingredientSwap.from)+" 대신 "+ingredientName(ingredientSwap.to)+"로 고르면 완성형 역할 점수가 약 "+ingredientSwap.gain.toFixed(1)+"% 높습니다.");
+
+ if(!good.length)good.push("현재 설정에는 본업을 직접 깎는 옵션이 적지만, 강한 가점도 제한적입니다.");
+ if(!issues.length){const label=p.specialty==="berry"?"나무열매·속도":p.specialty==="ingredient"?"식재료·속도":"스킬 확률·속도";add(1,"near-perfect",label+" 핵심 조건이 잘 갖춰져 있어 뚜렷한 구조적 약점은 없습니다. 현재 동일 종 상위 "+r.current.topPct.toFixed(1)+"%입니다.")}
+ issues.sort((x,y)=>y.priority-x.priority);
+ return{good:good.slice(0,4),bad:issues.slice(0,4).map(x=>x.text)};
+}
 function analyze(c){const p=mon(c.pokemonId);if(!p)throw Error("올바른 포켓몬을 선택해 주세요.");const current=rank(c),futureConfig={...c,level:80},future=rank(futureConfig);return{pokemon:p,role:role(p,c.versatileSkill),current,future,metrics:metrics(c),futureMetrics:metrics(futureConfig),ingredientLine:ingredientRank(futureConfig),species:speciesRank(c),verdict:verdict(current.topPct)}}
 function defaultConfig(id="RALTS"){const p=mon(id)||D.pokemon[0];return{pokemonId:p.id,level:70,mainSkillLevel:1,natureId:"HARDY",subskills:["HB","STM","HSM","INVL","BFS"],ingredients:defaultIngredients(p),collectionHours:4,favoriteBerry:false,teamHelpingBonus:0,ingredientTarget:"",versatileSkill:"Metronome"}}
-root.SleepGraderEngine={analyze,metrics,rankCandidate:rank,gradeFromTop:grade,getPokemon:mon,getNature:nat,getRole:role,getSkillRate:skillRate,versatileOptions:VERSATILE_OPTIONS,defaultConfig,defaultIngredientIds:defaultIngredients,activeCount,version:"1.1.0"};
+root.SleepGraderEngine={analyze,metrics,getInsights:insights,rankCandidate:rank,gradeFromTop:grade,getPokemon:mon,getNature:nat,getRole:role,getSkillRate:skillRate,versatileOptions:VERSATILE_OPTIONS,defaultConfig,defaultIngredientIds:defaultIngredients,activeCount,version:"1.2.0"};
 })(globalThis);
