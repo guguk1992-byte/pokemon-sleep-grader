@@ -14,10 +14,9 @@
 <div class="workspace">
 <section class="panel input-panel" aria-labelledby="inputTitle">
 <div class="panel-head"><div><span class="step">01</span><h2 id="inputTitle">개체 정보 입력</h2></div><button id="resetButton" type="button" class="text-button">초기화</button></div>
-<div class="preset-block"><span>대화에서 다룬 예시</span><div class="preset-row"><button type="button" class="preset-button" data-preset="ralts">랄토스</button><button type="button" class="preset-button" data-preset="gardevoir">가디안</button><button type="button" class="preset-button" data-preset="torterra">토대부기</button><button type="button" class="preset-button" data-preset="sceptile">Lv.66 나무킹</button></div></div>
 <div class="field"><label for="pokemonSearch">포켓몬</label><div class="search-wrap"><span>⌕</span><input id="pokemonSearch" list="pokemonList" autocomplete="off" placeholder="이름을 검색하세요"><datalist id="pokemonList"></datalist></div></div>
 <article id="pokemonMeta" class="pokemon-meta" aria-live="polite"></article>
-<div class="two-col"><div class="field"><label for="level">현재 레벨 <output id="levelValue">Lv.70</output></label><input id="level" type="range" min="1" max="80" value="70"><div class="range-marks"><span>1</span><span>30</span><span>60</span><span>80</span></div></div><div class="field"><label for="mainSkillLevel">메인 스킬 레벨</label><select id="mainSkillLevel"></select></div></div>
+<div class="two-col"><div class="field"><label for="level">현재 레벨 <output id="levelValue">Lv.70</output></label><input id="level" type="range" min="1" max="80" value="70"><div class="range-marks" aria-hidden="true"><span data-value="1">1</span><span data-value="30">30</span><span data-value="60">60</span><span data-value="80">80</span></div></div><div class="field"><label for="mainSkillLevel">메인 스킬 레벨</label><select id="mainSkillLevel"></select></div></div>
 <div class="field"><label for="nature">성격</label><select id="nature"></select></div>
 <fieldset><legend><span>식재료 구성</span><small>수량까지 자동 반영</small></legend><div class="ingredient-grid">
 <label class="ingredient-slot"><span><b>A</b> Lv.1</span><select id="ingredient0"></select><small class="slot-state"></small></label>
