@@ -4,8 +4,8 @@
 
 ## 바로 사용
 
-- **즉시 실행:** https://raw.githack.com/guguk1992-byte/pokemon-sleep-grader/main/index.html
-- **GitHub Pages(활성화 후):** https://guguk1992-byte.github.io/pokemon-sleep-grader/
+- **즉시 실행:** https://raw.githack.com/posleepy/pokemon-sleep-grader/main/index.html
+- **GitHub Pages(활성화 후):** https://posleepy.github.io/pokemon-sleep-grader/
 - **RaenonX 교차 확인:** https://pks.raenonx.cc/kr/rating
 
 ## 주요 기능
