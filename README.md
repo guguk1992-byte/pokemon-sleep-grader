@@ -1,1 +1,39 @@
-# pokemon-sleep-grader
+# 포슬립 개체 감정기 🌙
+
+포켓몬 슬립 개체의 성격, 식재료, 서브스킬을 입력하면 **같은 포켓몬의 가능한 조합 중 어느 정도인지** 역할별 백분위로 보여주는 한국어 웹앱입니다.
+
+## 바로 사용
+
+- **즉시 실행:** https://raw.githack.com/guguk1992-byte/pokemon-sleep-grader/main/index.html
+- **GitHub Pages(활성화 후):** https://guguk1992-byte.github.io/pokemon-sleep-grader/
+- **RaenonX 교차 확인:** https://pks.raenonx.cc/kr/rating
+
+## 주요 기능
+
+- 최신 공개 스냅샷 기준 247종 검색
+- 나무열매형 / 식재료형 / 스킬형 / 올라운더 자동 판별
+- 전체 회복 힐러, 단일 회복, 나무열매 강화, 식재료 수급, 요리 지원 등 스킬 역할 세분화
+- 현재 열린 서브스킬 기준 백분위와 Lv.80 완성형 백분위
+- 식재료 구성 별도 순위와 최종진화 동일 역할군 내 종 경쟁력
+- 확인 주기, 좋아하는 나무열매, 팀 도우미 보너스, 목표 식재료 반영
+- 설정 저장·공유 링크와 랄토스·가디안·토대부기·나무킹 프리셋
+
+## 판정 방식
+
+전문 타입과 실제 메인 스킬 역할마다 다른 가중치를 사용합니다. 같은 포켓몬의 성격 25종, 중복 없는 서브스킬, 가능한 식재료 구성을 고정 난수 표본 32,000개와 비교합니다. **상위 6%**라면 이 모델상 가능한 동일 포켓몬 개체 중 약 6% 안이라는 뜻입니다.
+
+이 값은 투자 판단용 독립 추정치이며 RaenonX 공식 점수나 비공개 계산식과 동일하지 않습니다.
+
+## 테스트
+
+Node.js 20 이상에서 `node --test`를 실행합니다. main 브랜치에 푸시할 때 GitHub Actions에서도 자동 검증합니다.
+
+## GitHub Pages 활성화
+
+**Settings → Pages → Build and deployment**에서 Source를 **Deploy from a branch**, Branch를 **main / (root)**로 지정하고 Save를 누르면 됩니다.
+
+## 데이터와 권리
+
+확인 기준과 포켓몬별 링크는 [RaenonX 포켓몬 슬립 위키](https://pks.raenonx.cc/kr)를 사용합니다. 자동 계산용 기본 수치 스냅샷은 Apache-2.0 공개 프로젝트 [Neroli’s Lab](https://github.com/nerolis-lab/nerolis-lab)의 데이터를 사용했습니다. 자세한 내용은 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)를 확인하세요.
+
+RaenonX 및 Pokémon 권리자들과 제휴되지 않은 비공식 팬 도구이며, 게임 이미지·공식 로고는 포함하지 않습니다.
