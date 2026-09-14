@@ -16,4 +16,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: node --test
+      - name: Check browser JavaScript syntax
+        run: node --check data.js && node --check engine.js && node --check app.js
+      - name: Run engine regression tests
+        run: node --test
