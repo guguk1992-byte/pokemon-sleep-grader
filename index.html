@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#081221">
+<meta name="description" content="포켓몬 슬립 성격·식재료·서브스킬을 역할별로 분석하는 한국어 개체 감정기">
+<title>포슬립 개체 감정기</title><link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="styles.css">
+<script src="data.js" defer></script><script src="engine.js" defer></script><script src="app.js" defer></script>
+</head>
+<body>
+<div class="sky" aria-hidden="true"><i></i><i></i><i></i></div>
+<header class="topbar"><a class="brand" href="./"><span class="brand-mark"><i></i></span><span><strong>포슬립 개체 감정기</strong><small>ROLE-AWARE GRADER</small></span></a><nav><span id="dataVersion" class="data-chip">DATA</span><a href="https://pks.raenonx.cc/kr/rating" target="_blank" rel="noreferrer">RaenonX 단독 평가 ↗</a><a href="https://github.com/guguk1992-byte/pokemon-sleep-grader" target="_blank" rel="noreferrer">GitHub ↗</a></nav></header>
+<main>
+<section class="intro"><div><span class="eyebrow">POKÉMON SLEEP · INDIVIDUAL ANALYSIS</span><h1>좋아 보이는 옵션 말고,<br><em>실제로 본업을 잘하는지</em> 봅니다.</h1></div><p>포켓몬의 전문·메인 스킬 역할을 먼저 판별하고, 동일 포켓몬의 가능한 성격·서브스킬·식재료 조합과 비교합니다. 현재 성능과 Lv.80 완성형을 따로 보여줍니다.</p></section>
+<div class="workspace">
+<section class="panel input-panel" aria-labelledby="inputTitle">
+<div class="panel-head"><div><span class="step">01</span><h2 id="inputTitle">개체 정보 입력</h2></div><button id="resetButton" type="button" class="text-button">초기화</button></div>
+<div class="preset-block"><span>대화에서 다룬 예시</span><div class="preset-row"><button type="button" class="preset-button" data-preset="ralts">랄토스</button><button type="button" class="preset-button" data-preset="gardevoir">가디안</button><button type="button" class="preset-button" data-preset="torterra">토대부기</button><button type="button" class="preset-button" data-preset="sceptile">Lv.66 나무킹</button></div></div>
+<div class="field"><label for="pokemonSearch">포켓몬</label><div class="search-wrap"><span>⌕</span><input id="pokemonSearch" list="pokemonList" autocomplete="off" placeholder="이름을 검색하세요"><datalist id="pokemonList"></datalist></div></div>
+<article id="pokemonMeta" class="pokemon-meta" aria-live="polite"></article>
+<div class="two-col"><div class="field"><label for="level">현재 레벨 <output id="levelValue">Lv.70</output></label><input id="level" type="range" min="1" max="80" value="70"><div class="range-marks"><span>1</span><span>30</span><span>60</span><span>80</span></div></div><div class="field"><label for="mainSkillLevel">메인 스킬 레벨</label><select id="mainSkillLevel"></select></div></div>
+<div class="field"><label for="nature">성격</label><select id="nature"></select></div>
+<fieldset><legend><span>식재료 구성</span><small>수량까지 자동 반영</small></legend><div class="ingredient-grid">
+<label class="ingredient-slot"><span><b>A</b> Lv.1</span><select id="ingredient0"></select><small class="slot-state"></small></label>
+<label class="ingredient-slot"><span><b>B</b> Lv.30</span><select id="ingredient30"></select><small class="slot-state"></small></label>
+<label class="ingredient-slot"><span><b>C</b> Lv.60</span><select id="ingredient60"></select><small class="slot-state"></small></label>
+</div></fieldset>
+<fieldset><legend><span>서브스킬</span><small>게임 내 순서 그대로</small></legend><div class="subskill-list">
+<label class="subskill-row"><span class="level-token">10</span><select class="subskill-select" aria-label="레벨 10 서브스킬"></select><small class="unlock-state"></small></label>
+<label class="subskill-row"><span class="level-token">25</span><select class="subskill-select" aria-label="레벨 25 서브스킬"></select><small class="unlock-state"></small></label>
+<label class="subskill-row"><span class="level-token">50</span><select class="subskill-select" aria-label="레벨 50 서브스킬"></select><small class="unlock-state"></small></label>
+<label class="subskill-row"><span class="level-token">70</span><select class="subskill-select" aria-label="레벨 70 서브스킬"></select><small class="unlock-state"></small></label>
+<label class="subskill-row"><span class="level-token">80</span><select class="subskill-select" aria-label="레벨 80 서브스킬"></select><small class="unlock-state"></small></label>
+</div></fieldset>
+<details class="advanced"><summary><span>환경 설정</span><small>수확 주기·팀·식재료 목표</small></summary><div class="advanced-grid">
+<div class="field"><label for="collectionHours">앱 확인 주기</label><select id="collectionHours"><option value="1">자주 수확 · 약 1시간</option><option value="4">보통 · 약 4시간</option><option value="8">주로 취침 후 · 약 8시간</option></select></div>
+<div class="field"><label for="teamHelpingBonus">팀의 다른 도우미 보너스</label><select id="teamHelpingBonus"><option value="0">0마리</option><option value="1">1마리</option><option value="2">2마리</option><option value="3">3마리</option><option value="4">4마리</option></select></div>
+<div class="field"><label for="ingredientTarget">식재료 평가 목표</label><select id="ingredientTarget"></select></div>
+<label class="toggle-field"><span><strong>좋아하는 나무열매</strong><small>해당 필드에서 나무열매 에너지 2배</small></span><input id="favoriteBerry" type="checkbox"><i></i></label>
+</div></details>
+<div class="input-actions"><button id="shareButton" type="button" class="primary-button"><span>↗</span> 이 설정 링크 복사</button><a id="sourcePokemon" class="source-button" href="https://pks.raenonx.cc/kr/pokedex" target="_blank" rel="noreferrer">RaenonX에서 확인 ↗</a></div>
+</section>
+<section class="panel result-panel" aria-labelledby="resultTitle"><div class="panel-head"><div><span class="step">02</span><h2 id="resultTitle">역할별 냉정 평가</h2></div><span class="live-dot"><i></i> 자동 계산</span></div><div id="resultStatus" class="result-status loading" aria-live="polite"><span class="spinner"></span><strong>가능한 개체 조합과 비교 중…</strong><small>첫 계산만 잠깐 걸립니다.</small></div><div id="resultContent" hidden></div></section>
+</div>
+<section class="methodology"><div class="method-copy"><span class="eyebrow">HOW IT WORKS</span><h2>한 숫자로 뭉개지 않고<br>역할부터 나눴습니다.</h2><p>나무열매형은 나무열매 수와 속도, 식재료형은 식재료 확률·구성·소지수, 스킬형은 실제 메인 스킬의 역할과 발동률을 우선합니다. 힐러와 나무열매 버스트형이 같은 기준으로 평가되는 일을 막았습니다.</p></div><div class="method-cards"><article><span>01</span><h3>본업 판별</h3><p>전문 타입과 메인 스킬을 조합해 전체 힐러, 식재료 수급, 나무열매 강화 등으로 세분화합니다.</p></article><article><span>02</span><h3>현재와 미래 분리</h3><p>현재 열린 서브스킬만으로 현 성능을 계산하고, Lv.80에서는 다섯 칸을 모두 반영합니다.</p></article><article><span>03</span><h3>같은 종 백분위</h3><p>25개 성격, 중복 없는 서브스킬, 가능한 식재료 구성을 3만 2천 표본으로 비교합니다.</p></article></div></section>
+<section class="disclaimer"><details><summary>데이터 출처와 계산 한계 보기</summary><div><p>포켓몬 정보 확인 기준은 <a href="https://pks.raenonx.cc/kr" target="_blank" rel="noreferrer">RaenonX 포켓몬 슬립 위키</a>이며, 각 결과에서 해당 도감으로 바로 이동할 수 있습니다. 자동 계산용 기본 수치는 공개 프로젝트 <a href="https://github.com/nerolis-lab/nerolis-lab" target="_blank" rel="noreferrer">Neroli’s Lab</a>의 공개 데이터 스냅샷을 사용했습니다.</p><p>RaenonX와 제휴된 서비스가 아니며 비공개 계산식을 복제하지 않습니다. 에너지 상태, 이벤트 보정, 요리 레시피와 팀 구성에 따라 실전 결과는 달라질 수 있습니다.</p></div></details></section>
+</main>
+<footer><p>Pokémon 및 Pokémon Sleep은 각 권리자의 상표입니다. 게임 이미지·상표 자산을 사용하지 않은 비공식 팬 도구입니다.</p><div><a href="https://pks.raenonx.cc/kr" target="_blank">RaenonX</a><a href="https://github.com/nerolis-lab/nerolis-lab" target="_blank">Public data</a><a href="https://github.com/guguk1992-byte/pokemon-sleep-grader" target="_blank">Source</a></div></footer>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body></html>
