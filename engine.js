@@ -58,7 +58,11 @@ function chosen(p,ids,level){const out=[];[["0",1],["30",30],["60",60]].forEach(
 function metrics(c,override){
  const p=override||mon(c.pokemonId);if(!p)throw Error("포켓몬을 찾을 수 없습니다.");
  const level=clamp(+c.level||1,1,80),n=nat(c.natureId),set=new Set((c.subskills||[]).slice(0,activeCount(level)));
- const hbs=Math.min(5,clamp(+c.teamHelpingBonus||0,0,4)+(set.has("HB")?1:0));
+ const otherHB=clamp(+c.teamHelpingBonus||0,0,4),hbs=Math.min(5,otherHB+(set.has("HB")?1:0));
+ // With no team roster available, value the four other helpers as equally productive
+ // neutral helpers. Their shared 5% speed gain belongs to this helper's contribution.
+ const sharedBefore=1-Math.min(.35,otherHB*.05),sharedAfter=1-Math.min(.35,hbs*.05);
+ const teamSharedGain=set.has("HB")?4*(sharedBefore/sharedAfter-1):0;
  const speedFactor=Math.max(.65,1-(set.has("HSM")?.14:0)-(set.has("HSS")?.07:0)-hbs*.05);
  const interval=Math.max(300,Math.floor(p.frequency*(1-.002*(level-1))*speedFactor/n.speed));
  const energy=n.energy<1?.94:n.energy>1?1.04:1,helps=86400/interval*energy;
@@ -79,8 +83,8 @@ function metrics(c,override){
  const ingredientStrengthDay=helps*ingChance*dropStrength*growth*ingRel;
  const bonus=(set.has("SLUM")?2:0)+(set.has("SLUS")?1:0),effectiveSkillLevel=clamp((+c.mainSkillLevel||1)+bonus,1,7);
  const levels=[1,1.24,1.53,1.86,2.23,2.63,3.06],skillProcsDay=helps*skillChance*skillRel,skillOutput=skillProcsDay*levels[effectiveSkillLevel-1];
- let utilityIndex=1;if(set.has("HB"))utilityIndex+=.2;if(set.has("ERB"))utilityIndex+=.045;if(set.has("SEB"))utilityIndex+=.06;if(set.has("DSB"))utilityIndex+=.035;if(set.has("REB"))utilityIndex+=.03;
- return{pokemon:p,role:role(p,c.versatileSkill),level,activeSubskills:[...set],interval,helpsPerDay:helps,ingredientChance:ingChance,skillChance,berryCount,inventory,fillHours,reliability:Math.min(ingRel,skillRel),berryStrengthDay,ingredientStrengthDay,skillProcsDay,skillOutput,effectiveSkillLevel,utilityIndex,chosenIngredients:sets};
+ let utilityIndex=1;if(set.has("ERB"))utilityIndex+=.045;if(set.has("SEB"))utilityIndex+=.06;if(set.has("DSB"))utilityIndex+=.035;if(set.has("REB"))utilityIndex+=.03;
+ return{pokemon:p,role:role(p,c.versatileSkill),level,activeSubskills:[...set],interval,helpsPerDay:helps,ingredientChance:ingChance,skillChance,berryCount,inventory,fillHours,reliability:Math.min(ingRel,skillRel),berryStrengthDay,ingredientStrengthDay,skillProcsDay,skillOutput,effectiveSkillLevel,utilityIndex,teamSharedGain,chosenIngredients:sets};
 }
 function weights(p,c){
  const r=role(p,c?.versatileSkill);if(p.specialty==="berry")return{b:.8,i:.07,s:.08,u:.05,core:"b"};
@@ -100,8 +104,8 @@ function scorer(c){
  const p=mon(c.pokemonId),w=weights(p,c),base=metrics({...c,natureId:"HARDY",subskills:filler(),ingredients:defaultIngredients(p)});
  const ratio=(x,y)=>y>0?x/y:1;
  function parts(x){const m=metrics(x);return{m,b:ratio(m.berryStrengthDay,base.berryStrengthDay),i:ratio(m.ingredientStrengthDay,base.ingredientStrengthDay),s:ratio(m.skillOutput,base.skillOutput),u:ratio(m.utilityIndex,base.utilityIndex)}}
- function score(x){const q=parts(x);return w.b*q.b+w.i*q.i+w.s*q.s+w.u*q.u}
- function indices(x){const q=parts(x),b=q.b*100,i=q.i*100,s=q.s*100;return{overall:score(x)*100,core:w.core==="b"?b:w.core==="i"?i:w.core==="x"?w.b*b+w.i*i+w.s*s:s,berry:b,ingredient:i,skill:s,team:q.m.utilityIndex*100}}
+ function score(x){const q=parts(x);return w.b*q.b+w.i*q.i+w.s*q.s+w.u*q.u+q.m.teamSharedGain}
+ function indices(x){const q=parts(x),b=q.b*100,i=q.i*100,s=q.s*100;return{overall:score(x)*100,core:w.core==="b"?b:w.core==="i"?i:w.core==="x"?w.b*b+w.i*i+w.s*s:s,berry:b,ingredient:i,skill:s,team:(q.u+q.m.teamSharedGain)*100}}
  return{score,indices};
 }
 function hash(t){let h=2166136261;for(let i=0;i<t.length;i++){h^=t.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
@@ -136,6 +140,8 @@ function bestSubskillChange(c,level){
   // A non-berry specialist's BFS is a second source of berry energy, not an empty role slot.
   // Compare its berry/skill tradeoff separately instead of recommending a one-axis swap.
   if(selected[slot]==="BFS"&&p.specialty!=="berry")continue;
+  // A personal-role swap is not a valid recommendation to throw away a team buff.
+  if(selected[slot]==="HB")continue;
   if(candidate.id===selected[slot]||selected.includes(candidate.id))continue;
   const next=selected.slice();next[slot]=candidate.id;const value=sc.score({...x,subskills:next});
   if(!best||value>best.value)best={slot,from:selected[slot],to:candidate.id,value};
@@ -229,5 +235,5 @@ function insights(c,report){
 }
 function analyze(c){const p=mon(c.pokemonId);if(!p)throw Error("올바른 포켓몬을 선택해 주세요.");const current=rank(c),futureConfig={...c,level:80},future=rank(futureConfig);return{pokemon:p,role:role(p,c.versatileSkill),current,future,metrics:metrics(c),futureMetrics:metrics(futureConfig),ingredientLine:ingredientRank(futureConfig),species:speciesRank(c),verdict:verdict(current.topPct)}}
 function defaultConfig(id="RALTS"){const p=mon(id)||D.pokemon[0];return{pokemonId:p.id,level:70,mainSkillLevel:1,natureId:"HARDY",subskills:["HB","STM","HSM","INVL","BFS"],ingredients:defaultIngredients(p),collectionHours:4,favoriteBerry:false,teamHelpingBonus:0,ingredientTarget:"",versatileSkill:"Metronome"}}
-root.SleepGraderEngine={analyze,metrics,getInsights:insights,getBerryFindingImpact:berryFindingImpact,placeSubskill,rankCandidate:rank,gradeFromTop:grade,getPokemon:mon,getNature:nat,getRole:role,getSkillRate:skillRate,versatileOptions:VERSATILE_OPTIONS,defaultConfig,defaultIngredientIds:defaultIngredients,activeCount,version:"1.4.0"};
+root.SleepGraderEngine={analyze,metrics,getInsights:insights,getBerryFindingImpact:berryFindingImpact,placeSubskill,rankCandidate:rank,gradeFromTop:grade,getPokemon:mon,getNature:nat,getRole:role,getSkillRate:skillRate,versatileOptions:VERSATILE_OPTIONS,defaultConfig,defaultIngredientIds:defaultIngredients,activeCount,version:"1.5.0"};
 })(globalThis);

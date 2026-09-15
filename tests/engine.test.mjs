@@ -102,3 +102,25 @@ test("placing a subskill exchanges its slot with a duplicate even if that slot i
   assert.throws(()=>E.placeSubskill(original,5,"BFS"));
   assert.throws(()=>E.placeSubskill(original,0,"UNKNOWN"));
 });
+test("Helping Bonus credits four teammates rather than only personal role output",()=>{
+  const base={...E.defaultConfig("GARDEVOIR"),level:25,mainSkillLevel:6,subskills:["HB","STM","INVL","HSM","REB"]};
+  const without={...base,subskills:["STS",...base.subskills.slice(1)]};
+  const personalOnly={...base,subskills:["HSS",...base.subskills.slice(1)]};
+  assert.ok(Math.abs(E.metrics(base).teamSharedGain-4*(1/.95-1))<1e-10);
+  assert.equal(E.metrics(without).teamSharedGain,0);
+  assert.ok(E.rankCandidate(base).score>E.rankCandidate(without).score);
+  assert.ok(E.rankCandidate(base).score>E.rankCandidate(personalOnly).score);
+  assert.ok(E.rankCandidate(base).indices.team>E.rankCandidate(without).indices.team);
+  const teammates={...base,teamHelpingBonus:4};
+  assert.ok(Math.abs(E.metrics(teammates).teamSharedGain-4*(.8/.75-1))<1e-10);
+});
+test("Helping Bonus is never called a shortcoming or recommended away",()=>{
+  for(const id of["GARDEVOIR","RALTS","MEW","SCEPTILE","TORTERRA"]){
+    const c={...E.defaultConfig(id),level:70,mainSkillLevel:7,subskills:["HB","STM","HSM","INVL","REB"]};
+    const notes=E.getInsights(c,E.analyze(c));
+    assert.ok(notes.good.some(x=>x.includes("도우미 보너스")),id);
+    assert.ok(notes.bad.every(x=>!x.includes("도우미 보너스 대신")),id+": "+notes.bad.join(" / "));
+  }
+  const locked={...E.defaultConfig("GARDEVOIR"),level:25,subskills:["STM","HSM","INVL","REB","HB"]};
+  assert.ok(E.getInsights(locked,E.analyze(locked)).bad.every(x=>!x.includes("도우미 보너스 대신")));
+});
