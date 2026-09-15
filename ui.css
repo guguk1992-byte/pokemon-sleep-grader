@@ -1,0 +1,18 @@
+.field #selectedPokemon{color:var(--mint);font-size:10px;font-weight:700}
+.level-main{display:flex;align-items:flex-start;gap:12px}
+.level-track{flex:1;min-width:0}
+.level-exact{flex:none;width:72px;min-height:43px;appearance:textfield;border:1px solid var(--line);border-radius:12px;outline:0;padding:0 8px;text-align:center;background:#050f1ba3;color:var(--text);font-size:14px;font-weight:700}
+.level-exact:focus{border-color:#6be1c88c;box-shadow:0 0 0 3px #6be1c814}
+.level-exact::-webkit-outer-spin-button,.level-exact::-webkit-inner-spin-button{margin:0;appearance:none}
+.level-shortcuts{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.level-shortcuts button{min-height:28px;border:1px solid var(--line);border-radius:8px;padding:4px 8px;background:#ffffff08;color:var(--muted);font-size:9px;font-weight:700}
+.level-shortcuts button:hover,.level-shortcuts button:focus-visible{border-color:#6be1c88c;color:var(--mint2);outline:0}
+.level-shortcuts button[aria-pressed="true"]{border-color:#6be1c868;background:#6be1c81d;color:var(--mint2)}
+.subskill-row{grid-template-columns:34px minmax(0,1fr) 72px}
+.subskill-row select{min-width:0}
+.subskill-row.locked{opacity:1;background:#050f1b55;border-color:#9caeb329}
+.subskill-row.locked .level-token{color:var(--faint);background:#ffffff06}
+.subskill-row.locked .unlock-state{color:#a6b8c5}
+.subskill-row .unlock-state{white-space:nowrap}
+fieldset legend small{text-align:right;line-height:1.45}
+@media(max-width:720px){.level-field{margin-bottom:22px}}

@@ -4,7 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#081221">
 <meta name="application-name" content="포슬립 개체 감정기"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="description" content="포켓몬 슬립 성격·식재료·서브스킬을 역할별로 분석하는 한국어 개체 감정기">
-<title>포슬립 개체 감정기</title><link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="icon-192.png"><link rel="manifest" href="manifest.webmanifest"><link rel="stylesheet" href="styles.css">
+<title>포슬립 개체 감정기</title><link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="icon-192.png"><link rel="manifest" href="manifest.webmanifest"><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="ui.css">
 <script src="data.js" defer></script><script src="engine.js" defer></script><script src="app.js" defer></script>
 </head>
 <body>
@@ -15,9 +15,9 @@
 <div class="workspace">
 <section class="panel input-panel" aria-labelledby="inputTitle">
 <div class="panel-head"><div><span class="step">01</span><h2 id="inputTitle">개체 정보 입력</h2></div><button id="resetButton" type="button" class="text-button">초기화</button></div>
-<div class="field"><label for="pokemonSearch">포켓몬</label><div class="search-wrap"><span>⌕</span><input id="pokemonSearch" list="pokemonList" autocomplete="off" placeholder="이름을 검색하세요"><datalist id="pokemonList"></datalist></div></div>
+<div class="field"><label for="pokemonSearch">포켓몬 <span id="selectedPokemon">현재: 랄토스</span></label><div class="search-wrap"><span>⌕</span><input id="pokemonSearch" type="search" list="pokemonList" autocomplete="off" spellcheck="false" enterkeyhint="search" placeholder="새 포켓몬 이름을 바로 입력하세요"><datalist id="pokemonList"></datalist></div></div>
 <article id="pokemonMeta" class="pokemon-meta" aria-live="polite"></article>
-<div class="two-col"><div class="field"><label for="level">현재 레벨 <output id="levelValue">Lv.70</output></label><input id="level" type="range" min="1" max="80" value="70"><div class="range-marks" aria-hidden="true"><span data-value="1">1</span><span data-value="30">30</span><span data-value="60">60</span><span data-value="80">80</span></div></div><div class="field"><label for="mainSkillLevel">메인 스킬 레벨</label><select id="mainSkillLevel"></select></div></div>
+<div class="two-col"><div class="field level-field"><label for="level">현재 레벨 <output id="levelValue">Lv.70</output></label><div class="level-main"><div class="level-track"><input id="level" type="range" min="1" max="80" value="70" aria-label="현재 레벨 슬라이더"><div class="range-marks" aria-hidden="true"><span data-value="1">1</span><span data-value="30">30</span><span data-value="60">60</span><span data-value="80">80</span></div></div><input id="levelExact" class="level-exact" type="number" inputmode="numeric" min="1" max="80" step="1" value="70" aria-label="정확한 현재 레벨 입력"></div><div class="level-shortcuts" role="group" aria-label="주요 레벨 바로 선택"><button type="button" data-level="1">Lv.1</button><button type="button" data-level="10">Lv.10</button><button type="button" data-level="25">Lv.25</button><button type="button" data-level="30">Lv.30</button><button type="button" data-level="50">Lv.50</button><button type="button" data-level="60">Lv.60</button><button type="button" data-level="70">Lv.70</button><button type="button" data-level="80">Lv.80</button></div></div><div class="field"><label for="mainSkillLevel">메인 스킬 레벨</label><select id="mainSkillLevel"></select></div></div>
 <div id="versatileField" class="field versatile-field" hidden><label for="versatileSkill">올마이티 메인 스킬</label><select id="versatileSkill"></select><small class="field-help">뮤가 현재 배운 스킬을 선택하세요. 유레카 씨앗(뮤)으로 변경할 수 있습니다.</small></div>
 <div class="field"><label for="nature">성격</label><select id="nature"></select></div>
 <fieldset><legend><span>식재료 구성</span><small>수량까지 자동 반영</small></legend><div class="ingredient-grid">
@@ -25,7 +25,7 @@
 <label class="ingredient-slot"><span><b>B</b> Lv.30</span><select id="ingredient30"></select><small class="slot-state"></small></label>
 <label class="ingredient-slot"><span><b>C</b> Lv.60</span><select id="ingredient60"></select><small class="slot-state"></small></label>
 </div></fieldset>
-<fieldset><legend><span>서브스킬</span><small>게임 내 순서 그대로</small></legend><div class="subskill-list">
+<fieldset><legend><span>서브스킬</span><small>잠긴 칸도 편집 · 중복 선택 시 위치 교환</small></legend><div class="subskill-list">
 <label class="subskill-row"><span class="level-token">10</span><select class="subskill-select" aria-label="레벨 10 서브스킬"></select><small class="unlock-state"></small></label>
 <label class="subskill-row"><span class="level-token">25</span><select class="subskill-select" aria-label="레벨 25 서브스킬"></select><small class="unlock-state"></small></label>
 <label class="subskill-row"><span class="level-token">50</span><select class="subskill-select" aria-label="레벨 50 서브스킬"></select><small class="unlock-state"></small></label>

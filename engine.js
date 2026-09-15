@@ -22,6 +22,14 @@ const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 const mon=id=>D.pokemon.find(p=>p.id===id);
 const nat=id=>D.natures.find(n=>n.id===id)||D.natures.find(n=>n.id==="HARDY");
 const activeCount=l=>D.unlocks.filter(x=>x<=l).length;
+const SUBSKILL_IDS=new Set(D.subskills.map(x=>x.id));
+function placeSubskill(subskills,slot,id){
+ if(!Array.isArray(subskills)||subskills.length!==D.unlocks.length||new Set(subskills).size!==subskills.length||subskills.some(x=>!SUBSKILL_IDS.has(x))||!Number.isInteger(slot)||slot<0||slot>=subskills.length||!SUBSKILL_IDS.has(id))throw Error("올바른 서브스킬 배열과 칸을 선택해 주세요.");
+ const next=subskills.slice(),other=next.findIndex((x,i)=>i!==slot&&x===id),previous=next[slot];
+ next[slot]=id;
+ if(other>=0)next[other]=previous;
+ return next;
+}
 function role(p,versatileSkill){
  const s=resolvedSkill(p,versatileSkill),pick=p.skill==="Versatile"?versatileOption(versatileSkill):null;let category="other",label="기타 스킬",skillName=s;
  if(/EnergyForEveryone/.test(s)){category="healerAll";label="전체 회복 힐러";skillName="모두의 기운 올S"}
@@ -221,5 +229,5 @@ function insights(c,report){
 }
 function analyze(c){const p=mon(c.pokemonId);if(!p)throw Error("올바른 포켓몬을 선택해 주세요.");const current=rank(c),futureConfig={...c,level:80},future=rank(futureConfig);return{pokemon:p,role:role(p,c.versatileSkill),current,future,metrics:metrics(c),futureMetrics:metrics(futureConfig),ingredientLine:ingredientRank(futureConfig),species:speciesRank(c),verdict:verdict(current.topPct)}}
 function defaultConfig(id="RALTS"){const p=mon(id)||D.pokemon[0];return{pokemonId:p.id,level:70,mainSkillLevel:1,natureId:"HARDY",subskills:["HB","STM","HSM","INVL","BFS"],ingredients:defaultIngredients(p),collectionHours:4,favoriteBerry:false,teamHelpingBonus:0,ingredientTarget:"",versatileSkill:"Metronome"}}
-root.SleepGraderEngine={analyze,metrics,getInsights:insights,getBerryFindingImpact:berryFindingImpact,rankCandidate:rank,gradeFromTop:grade,getPokemon:mon,getNature:nat,getRole:role,getSkillRate:skillRate,versatileOptions:VERSATILE_OPTIONS,defaultConfig,defaultIngredientIds:defaultIngredients,activeCount,version:"1.3.0"};
+root.SleepGraderEngine={analyze,metrics,getInsights:insights,getBerryFindingImpact:berryFindingImpact,placeSubskill,rankCandidate:rank,gradeFromTop:grade,getPokemon:mon,getNature:nat,getRole:role,getSkillRate:skillRate,versatileOptions:VERSATILE_OPTIONS,defaultConfig,defaultIngredientIds:defaultIngredients,activeCount,version:"1.4.0"};
 })(globalThis);

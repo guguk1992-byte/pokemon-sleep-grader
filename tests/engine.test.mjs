@@ -87,3 +87,18 @@ test("Berry Finding S inventory warning depends on measured impact, not species 
   assert.ok(overnightNotes.bad.some(x=>x.includes("나무열매 수 S로 소지품이")&&x.includes("식재료 생산")));
   assert.ok(overnightNotes.good.some(x=>x.includes("나무열매 수 S")&&x.includes("열매 기초에너지")));
 });
+test("placing a subskill exchanges its slot with a duplicate even if that slot is locked",()=>{
+  const original=["HB","STM","HSM","INVL","BFS"];
+  const swapped=E.placeSubskill(original,0,"BFS");
+  assert.deepEqual(swapped,["BFS","STM","HSM","INVL","HB"]);
+  assert.deepEqual(original,["HB","STM","HSM","INVL","BFS"]);
+  assert.equal(new Set(swapped).size,5);
+  const c={...E.defaultConfig("RALTS"),level:25,subskills:original};
+  const baseline=E.metrics(c),now=E.metrics({...c,subskills:swapped});
+  assert.equal(now.berryCount,baseline.berryCount+1);
+  assert.ok(now.berryStrengthDay>baseline.berryStrengthDay);
+  const editLocked=E.placeSubskill(original,4,"STS");
+  assert.equal(E.metrics({...c,subskills:editLocked}).berryStrengthDay,baseline.berryStrengthDay);
+  assert.throws(()=>E.placeSubskill(original,5,"BFS"));
+  assert.throws(()=>E.placeSubskill(original,0,"UNKNOWN"));
+});

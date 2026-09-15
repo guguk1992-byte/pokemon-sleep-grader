@@ -2,7 +2,7 @@
 "use strict";
 const D=globalThis.PSG_DATA,E=globalThis.SleepGraderEngine,$=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const by=Object.fromEntries(D.pokemon.map(p=>[p.id,p])),sub=Object.fromEntries(D.subskills.map(s=>[s.id,s])),nature=Object.fromEntries(D.natures.map(n=>[n.id,n]));
-const el={search:$("#pokemonSearch"),list:$("#pokemonList"),meta:$("#pokemonMeta"),level:$("#level"),levelOut:$("#levelValue"),nature:$("#nature"),skill:$("#mainSkillLevel"),versatileField:$("#versatileField"),versatile:$("#versatileSkill"),subs:$$(".subskill-select"),i0:$("#ingredient0"),i30:$("#ingredient30"),i60:$("#ingredient60"),target:$("#ingredientTarget"),collect:$("#collectionHours"),fav:$("#favoriteBerry"),team:$("#teamHelpingBonus"),result:$("#resultContent"),status:$("#resultStatus"),source:$("#sourcePokemon"),share:$("#shareButton"),reset:$("#resetButton"),install:$("#installButton"),version:$("#dataVersion")};
+const el={search:$("#pokemonSearch"),selected:$("#selectedPokemon"),list:$("#pokemonList"),meta:$("#pokemonMeta"),level:$("#level"),levelExact:$("#levelExact"),levelButtons:$$(".level-shortcuts button"),levelOut:$("#levelValue"),nature:$("#nature"),skill:$("#mainSkillLevel"),versatileField:$("#versatileField"),versatile:$("#versatileSkill"),subs:$$(".subskill-select"),i0:$("#ingredient0"),i30:$("#ingredient30"),i60:$("#ingredient60"),target:$("#ingredientTarget"),collect:$("#collectionHours"),fav:$("#favoriteBerry"),team:$("#teamHelpingBonus"),result:$("#resultContent"),status:$("#resultStatus"),source:$("#sourcePokemon"),share:$("#shareButton"),reset:$("#resetButton"),install:$("#installButton"),version:$("#dataVersion")};
 const labels=new Map();let timer,config,installPrompt;
 const esc=x=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 const fTop=x=>"상위 "+x.toFixed(x<1?2:1)+"%";
@@ -11,7 +11,7 @@ const monLabel=p=>p.ko+" · "+p.en;
 const mod=x=>({speed:"도우미 속도",ingredient:"식재료 확률",skill:"스킬 확률",energy:"기운 회복",exp:"EXP",neutral:"무보정"}[x]||x);
 const natureLabel=n=>n.up==="neutral"?n.ko+" · 무보정":n.ko+" · "+mod(n.up)+"↑ / "+mod(n.down)+"↓";
 function sanitize(x={}){
- const p=by[x.pokemonId]||by.RALTS||D.pokemon[0],c={...E.defaultConfig(p.id),...x},hours=+c.collectionHours;c.pokemonId=p.id;c.level=Math.min(80,Math.max(1,+c.level||1));c.mainSkillLevel=Math.min(7,Math.max(1,+c.mainSkillLevel||1));c.natureId=nature[c.natureId]?c.natureId:"HARDY";c.collectionHours=Number.isInteger(hours)&&hours>=1&&hours<=8?hours:4;c.teamHelpingBonus=Math.min(4,Math.max(0,+c.teamHelpingBonus||0));c.favoriteBerry=!!c.favoriteBerry;c.ingredients={...E.defaultIngredientIds(p),...(c.ingredients||{})};c.versatileSkill=E.versatileOptions.some(v=>v.id===c.versatileSkill)?c.versatileSkill:"Metronome";
+ const p=by[x.pokemonId]||by.RALTS||D.pokemon[0],c={...E.defaultConfig(p.id),...x},hours=+c.collectionHours,level=Number(c.level);c.pokemonId=p.id;c.level=Number.isFinite(level)?Math.min(80,Math.max(1,Math.round(level))):70;c.mainSkillLevel=Math.min(7,Math.max(1,+c.mainSkillLevel||1));c.natureId=nature[c.natureId]?c.natureId:"HARDY";c.collectionHours=Number.isInteger(hours)&&hours>=1&&hours<=8?hours:4;c.teamHelpingBonus=Math.min(4,Math.max(0,+c.teamHelpingBonus||0));c.favoriteBerry=!!c.favoriteBerry;c.ingredients={...E.defaultIngredientIds(p),...(c.ingredients||{})};c.versatileSkill=E.versatileOptions.some(v=>v.id===c.versatileSkill)?c.versatileSkill:"Metronome";
  const a=[];(c.subskills||[]).forEach(id=>{if(sub[id]&&!a.includes(id))a.push(id)});D.subskills.forEach(s=>{if(a.length<5&&!a.includes(s.id))a.push(s.id)});c.subskills=a.slice(0,5);if(c.ingredientTarget&&!D.ingredients[c.ingredientTarget])c.ingredientTarget="";return c;
 }
 function hashConfig(){
@@ -30,7 +30,7 @@ function setup(){
  el.target.add(new Option("총 기초에너지 기준",""));Object.entries(D.ingredients).filter(x=>x[1].value>0).sort((a,b)=>a[1].ko.localeCompare(b[1].ko,"ko")).forEach(([id,x])=>el.target.add(new Option(x.ko+" 집중",id)));
 }
 function fillSubs(){
- el.subs.forEach((s,i)=>{s.innerHTML="";D.subskills.forEach(x=>{const o=new Option(x.ko,x.id);o.disabled=config.subskills.includes(x.id)&&config.subskills[i]!==x.id;s.add(o)});s.value=config.subskills[i];const row=s.closest(".subskill-row"),open=config.level>=D.unlocks[i];row.classList.toggle("locked",!open);row.dataset.rarity=sub[config.subskills[i]].rarity;const st=row.querySelector(".unlock-state");st.textContent=open?"적용 중":"잠김";st.className="unlock-state "+(open?"active":"")});
+ el.subs.forEach((s,i)=>{s.innerHTML="";D.subskills.forEach(x=>s.add(new Option(x.ko,x.id)));s.value=config.subskills[i];const row=s.closest(".subskill-row"),open=config.level>=D.unlocks[i];row.classList.toggle("locked",!open);row.dataset.rarity=sub[config.subskills[i]].rarity;const st=row.querySelector(".unlock-state");st.textContent=open?"적용 중":"미적용 · 편집";st.title=open?"현재 레벨에서 적용 중입니다.":"Lv."+D.unlocks[i]+"부터 적용되지만, 지금도 스킬과 위치를 변경할 수 있습니다.";st.className="unlock-state "+(open?"active":"")});
 }
 function fillIngredients(){
  const p=by[config.pokemonId];[["0",el.i0],["30",el.i30],["60",el.i60]].forEach(([k,s])=>{s.innerHTML="";const a=p.ingredients[k]||[];a.forEach(x=>s.add(new Option((D.ingredients[x.id]?.ko||x.id)+" ×"+x.amount,x.id)));if(!a.some(x=>x.id===config.ingredients[k]))config.ingredients[k]=a[0]?.id;s.value=config.ingredients[k];const box=s.closest(".ingredient-slot"),u=k==="0"?1:+k;box.classList.toggle("locked",config.level<u);box.querySelector(".slot-state").textContent=config.level>=u?"현재 적용":"Lv."+u+" 해금"});
@@ -42,10 +42,17 @@ function meta(){
  el.source.href="https://pks.raenonx.cc/kr/pokedex/"+p.pokedexNumber;el.source.textContent="RaenonX에서 "+p.ko+" 확인 ↗";
 }
 function syncRange(){
- const min=Number(el.level.min),max=Number(el.level.max),span=max-min||1,position=value=>(Number(value)-min)/span*100;el.level.style.setProperty("--range-progress",position(el.level.value)+"%");$$(".range-marks span").forEach(mark=>mark.style.setProperty("--range-position",position(mark.dataset.value)+"%"));
+ const min=Number(el.level.min),max=Number(el.level.max),span=max-min||1,position=value=>(Number(value)-min)/span*100;el.level.style.setProperty("--range-progress",position(el.level.value)+"%");$$(".range-marks span").forEach(mark=>mark.style.setProperty("--range-position",position(mark.dataset.value)+"%"));el.levelButtons.forEach(button=>button.setAttribute("aria-pressed",+button.dataset.level===+el.level.value?"true":"false"));
 }
 function sync(){
- const p=by[config.pokemonId];el.search.value=monLabel(p);el.level.value=config.level;syncRange();el.levelOut.textContent="Lv."+config.level;el.nature.value=config.natureId;el.skill.value=config.mainSkillLevel;el.versatile.value=config.versatileSkill;el.versatileField.hidden=p.skill!=="Versatile";el.collect.value=config.collectionHours;el.fav.checked=config.favoriteBerry;el.team.value=config.teamHelpingBonus;el.target.value=config.ingredientTarget||"";fillSubs();fillIngredients();meta();save();schedule();
+ const p=by[config.pokemonId];el.search.value="";el.search.placeholder="현재 "+p.ko+" · 새 포켓몬 이름 입력";el.selected.textContent="현재: "+p.ko;el.level.value=config.level;el.levelExact.value=config.level;syncRange();el.levelOut.textContent="Lv."+config.level;el.nature.value=config.natureId;el.skill.value=config.mainSkillLevel;el.versatile.value=config.versatileSkill;el.versatileField.hidden=p.skill!=="Versatile";el.collect.value=config.collectionHours;el.fav.checked=config.favoriteBerry;el.team.value=config.teamHelpingBonus;el.target.value=config.ingredientTarget||"";fillSubs();fillIngredients();meta();save();schedule();
+}
+function setLevel(raw){
+ const next=Number(raw);
+ if(String(raw).trim()===""||!Number.isInteger(next)){el.levelExact.value=config.level;toast("레벨은 1~80 사이의 정수로 입력해 주세요.");return}
+ const level=Math.min(80,Math.max(1,next));if(level!==next)toast("레벨은 1~80까지만 설정할 수 있어요.");
+ const changed=level!==config.level;config.level=level;el.level.value=level;el.levelExact.value=level;el.levelOut.textContent="Lv."+level;syncRange();
+ if(changed){fillSubs();fillIngredients();meta();save();schedule()}
 }
 function read(){
  config=sanitize({...config,level:+el.level.value,natureId:el.nature.value,mainSkillLevel:+el.skill.value,versatileSkill:el.versatile.value,subskills:el.subs.map(x=>x.value),ingredients:{"0":el.i0.value,"30":el.i30.value,"60":el.i60.value},ingredientTarget:el.target.value,collectionHours:+el.collect.value,favoriteBerry:el.fav.checked,teamHelpingBonus:+el.team.value});
@@ -65,9 +72,14 @@ function render(r){
 function schedule(){clearTimeout(timer);el.status.hidden=false;el.status.classList.add("loading");el.status.innerHTML='<span class="spinner"></span><strong>가능한 개체 조합과 비교 중…</strong><small>첫 계산만 잠깐 걸립니다.</small>';el.result.hidden=true;timer=setTimeout(()=>{try{render(E.analyze(config))}catch(err){el.status.innerHTML="<strong>계산하지 못했습니다.</strong><span>"+esc(err.message)+"</span>"}},80)}
 function toast(x){const t=$("#toast");t.textContent=x;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200)}
 function bind(){
- el.search.addEventListener("change",()=>{const v=el.search.value.trim().toLocaleLowerCase(),id=labels.get(v)||D.pokemon.find(p=>p.ko.includes(el.search.value.trim())||p.en.toLocaleLowerCase().includes(v))?.id;if(id){config.pokemonId=id;config.versatileSkill=E.defaultConfig(id).versatileSkill;config.ingredients=E.defaultIngredientIds(by[id]);sync()}else{el.search.value=monLabel(by[config.pokemonId]);toast("목록의 포켓몬을 선택해 주세요.")}});
- [el.level,el.nature,el.skill,el.versatile,el.i0,el.i30,el.i60,el.target,el.collect,el.fav,el.team].forEach(x=>x.addEventListener(x.type==="range"?"input":"change",()=>{read();syncRange();el.levelOut.textContent="Lv."+config.level;fillSubs();fillIngredients();meta();save();schedule()}));
- el.subs.forEach((s,i)=>s.addEventListener("change",()=>{const v=s.value,j=config.subskills.findIndex((x,n)=>n!==i&&x===v);if(j>=0)config.subskills[j]=D.subskills.find(x=>!config.subskills.includes(x.id)).id;config.subskills[i]=v;fillSubs();save();schedule()}));
+ el.search.addEventListener("change",()=>{const value=el.search.value.trim();if(!value)return;const v=value.toLocaleLowerCase(),id=labels.get(v)||D.pokemon.find(p=>p.ko.includes(value)||p.en.toLocaleLowerCase().includes(v))?.id;if(id){if(config.pokemonId!==id){config.pokemonId=id;config.versatileSkill=E.defaultConfig(id).versatileSkill;config.ingredients=E.defaultIngredientIds(by[id]);sync()}else el.search.value=""}else{el.search.value="";toast("목록의 포켓몬을 선택해 주세요.")}});
+ el.search.addEventListener("keydown",event=>{if(event.key==="Enter")el.search.blur()});
+ el.level.addEventListener("input",()=>setLevel(el.level.value));
+ el.levelExact.addEventListener("change",()=>setLevel(el.levelExact.value));
+ el.levelExact.addEventListener("keydown",event=>{if(event.key==="Enter")el.levelExact.blur()});
+ el.levelButtons.forEach(button=>button.addEventListener("click",()=>setLevel(button.dataset.level)));
+ [el.nature,el.skill,el.versatile,el.i0,el.i30,el.i60,el.target,el.collect,el.fav,el.team].forEach(x=>x.addEventListener("change",()=>{read();syncRange();el.levelOut.textContent="Lv."+config.level;fillSubs();fillIngredients();meta();save();schedule()}));
+ el.subs.forEach((s,i)=>s.addEventListener("change",()=>{const v=s.value,other=config.subskills.findIndex((x,n)=>n!==i&&x===v),previous=config.subskills[i];if(previous===v)return;config.subskills=E.placeSubskill(config.subskills,i,v);fillSubs();save();schedule();if(other>=0)toast("Lv."+D.unlocks[i]+"과 Lv."+D.unlocks[other]+"의 스킬 위치를 교환했어요.")}));
  el.share.addEventListener("click",()=>{read();const bytes=unescape(encodeURIComponent(JSON.stringify(config))),h=btoa(bytes).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");history.replaceState(null,"","#c="+h);navigator.clipboard.writeText(location.href).then(()=>toast("설정 링크를 복사했습니다.")).catch(()=>toast("주소창의 링크를 복사해 주세요."))});
  el.reset.addEventListener("click",()=>{config=sanitize(E.defaultConfig("RALTS"));localStorage.removeItem("psg-config");history.replaceState(null,"",location.pathname+location.search);sync();toast("기본값으로 되돌렸습니다.")});
 }
