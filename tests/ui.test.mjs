@@ -26,13 +26,14 @@ test("exact level and unlock-level shortcuts are present and cached for offline 
 });
 test("Helping Bonus team-model assumptions are visible and cached app files refresh",()=>{
   assert.doesNotMatch(html,/class="team-model-note"/);
-  assert.match(html,/src="app\.js\?v=9" defer/);
+  assert.match(html,/src="app\.js\?v=10" defer/);
+  assert.match(html,/src="engine\.js\?v=10" defer/);
   assert.match(app,/<p class="team-footnote">도우미 보너스의 팀 가치는 팀원 4마리/);
   assert.match(css,/\.result-footnote \.team-footnote\{[^}]*font-size:inherit/);
   assert.match(html,/35% 상한/);
-  assert.match(serviceWorker,/pokemon-sleep-grader-v9/);
-  assert.match(serviceWorker,/"\.\/engine\.js"/);
-  assert.match(serviceWorker,/"\.\/app\.js\?v=9"/);
+  assert.match(serviceWorker,/pokemon-sleep-grader-v10/);
+  assert.match(serviceWorker,/"\.\/engine\.js\?v=10"/);
+  assert.match(serviceWorker,/"\.\/app\.js\?v=10"/);
 });
 
 function appHarness(){
@@ -46,7 +47,7 @@ function appHarness(){
       set innerHTML(value){this.html=value;if(value==="")this.options=[]},get innerHTML(){return this.html||""}
     };
   }
-  const ids=["pokemonSearch","selectedPokemon","pokemonList","pokemonMeta","level","levelExact","levelValue","nature","mainSkillLevel","versatileField","versatileSkill","ingredient0","ingredient30","ingredient60","ingredientTarget","collectionHours","favoriteBerry","teamHelpingBonus","resultContent","resultStatus","sourcePokemon","shareButton","resetButton","installButton","dataVersion","toast"],elements=Object.fromEntries(ids.map(id=>[id,makeElement()]));
+  const ids=["pokemonSearch","selectedPokemon","pokemonList","pokemonMeta","level","levelExact","levelValue","nature","natureNote","mainSkillLevel","versatileField","versatileSkill","ingredient0","ingredient30","ingredient60","ingredientTarget","collectionHours","favoriteBerry","teamHelpingBonus","resultContent","resultStatus","sourcePokemon","shareButton","resetButton","installButton","dataVersion","toast"],elements=Object.fromEntries(ids.map(id=>[id,makeElement()]));
   elements.level.min="1";elements.level.max="80";elements.level.type="range";
   const subs=Array.from({length:5},()=>makeElement()),rows=subs.map(()=>makeElement()),ingredientBoxes=["ingredient0","ingredient30","ingredient60"].map(()=>makeElement());
   subs.forEach((select,i)=>{rows[i].status=makeElement();rows[i].querySelector=()=>rows[i].status;select.closest=()=>rows[i]});
@@ -72,6 +73,28 @@ test("the team assumption renders inside the existing verdict footnote",()=>{
   const result=ui.elements.resultContent.innerHTML;
   assert.match(result,/<div class="result-footnote">[\s\S]*<p class="team-footnote">도우미 보너스의 팀 가치는 팀원 4마리의 생산성이 같고 속도 상한에 닿지 않았다고 가정한 근사치입니다\. 실제 팀 구성에 따라 달라집니다\.<\/p><\/div>$/);
   assert.equal((result.match(/도우미 보너스의 팀 가치는/g)||[]).length,1);
+});
+
+test("Mew and Darkrai display no nature and omit nature comparisons",()=>{
+  const ui=appHarness(),search=ui.elements.pokemonSearch,nature=ui.elements.nature,note=ui.elements.natureNote;
+  assert.equal(nature.disabled,false);
+  assert.equal(nature.options.length,25);
+  for(const [name,id] of[["뮤","MEW"],["다크라이","DARKRAI"]]){
+    search.value=name;search.fire("change");
+    assert.equal(ui.getSaved().pokemonId,id);
+    assert.equal(ui.getSaved().natureId,"HARDY");
+    assert.equal(nature.disabled,true);
+    assert.equal(nature.options.length,1);
+    assert.equal(nature.options[0].text,"성격 없음");
+    assert.equal(note.hidden,false);
+  }
+  ui.renderPending();
+  assert.match(ui.elements.resultContent.innerHTML,/같은 포켓몬의 성격 없이, 중복 없는 서브스킬/);
+  assert.doesNotMatch(ui.elements.resultContent.innerHTML,/성격보다/);
+  search.value="랄토스";search.fire("change");
+  assert.equal(nature.disabled,false);
+  assert.equal(nature.options.length,25);
+  assert.equal(note.hidden,true);
 });
 
 test("changing Pokémon never requires erasing the previously selected name",()=>{

@@ -124,3 +124,19 @@ test("Helping Bonus is never called a shortcoming or recommended away",()=>{
   const locked={...E.defaultConfig("GARDEVOIR"),level:25,subskills:["STM","HSM","INVL","REB","HB"]};
   assert.ok(E.getInsights(locked,E.analyze(locked)).bad.every(x=>!x.includes("도우미 보너스 대신")));
 });
+test("Mew and Darkrai have no nature modifiers or nature advice",()=>{
+  for(const id of["MEW","DARKRAI"]){
+    const p=E.getPokemon(id),plain={...E.defaultConfig(id),level:70,natureId:"HARDY"},modified={...plain,natureId:"CALM"};
+    assert.equal(E.hasNature(p),false,id);
+    assert.equal(E.metrics(modified).helpsPerDay,E.metrics(plain).helpsPerDay,id);
+    assert.equal(E.metrics(modified).skillProcsDay,E.metrics(plain).skillProcsDay,id);
+    const a=E.analyze(plain),b=E.analyze(modified);
+    assert.equal(a.current.score,b.current.score,id);
+    assert.equal(a.current.topPct,b.current.topPct,id);
+    const advice=E.getInsights(modified,b);
+    assert.ok([...advice.good,...advice.bad].every(x=>!x.includes("성격")&&!x.includes("무보정")),id+": "+JSON.stringify(advice));
+  }
+  assert.equal(E.hasNature(E.getPokemon("RALTS")),true);
+  const r=E.defaultConfig("RALTS");
+  assert.notEqual(E.metrics({...r,natureId:"CALM"}).helpsPerDay,E.metrics(r).helpsPerDay);
+});

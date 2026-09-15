@@ -23,6 +23,8 @@ const mon=id=>D.pokemon.find(p=>p.id===id);
 const nat=id=>D.natures.find(n=>n.id===id)||D.natures.find(n=>n.id==="HARDY");
 const activeCount=l=>D.unlocks.filter(x=>x<=l).length;
 const SUBSKILL_IDS=new Set(D.subskills.map(x=>x.id));
+const NATURELESS_IDS=new Set(["MEW","DARKRAI"]);
+const hasNature=p=>!NATURELESS_IDS.has(typeof p==="string"?p:p?.id);
 function placeSubskill(subskills,slot,id){
  if(!Array.isArray(subskills)||subskills.length!==D.unlocks.length||new Set(subskills).size!==subskills.length||subskills.some(x=>!SUBSKILL_IDS.has(x))||!Number.isInteger(slot)||slot<0||slot>=subskills.length||!SUBSKILL_IDS.has(id))throw Error("올바른 서브스킬 배열과 칸을 선택해 주세요.");
  const next=subskills.slice(),other=next.findIndex((x,i)=>i!==slot&&x===id),previous=next[slot];
@@ -57,7 +59,7 @@ function defaultIngredients(p){const r={};["0","30","60"].forEach(k=>{if(p.ingre
 function chosen(p,ids,level){const out=[];[["0",1],["30",30],["60",60]].forEach(([k,u])=>{if(level>=u){const a=p.ingredients[k]||[];out.push(a.find(x=>x.id===ids?.[k])||a[0])}});return out.filter(Boolean)}
 function metrics(c,override){
  const p=override||mon(c.pokemonId);if(!p)throw Error("포켓몬을 찾을 수 없습니다.");
- const level=clamp(+c.level||1,1,80),n=nat(c.natureId),set=new Set((c.subskills||[]).slice(0,activeCount(level)));
+ const level=clamp(+c.level||1,1,80),n=nat(hasNature(p)?c.natureId:"HARDY"),set=new Set((c.subskills||[]).slice(0,activeCount(level)));
  const otherHB=clamp(+c.teamHelpingBonus||0,0,4),hbs=Math.min(5,otherHB+(set.has("HB")?1:0));
  // With no team roster available, value the four other helpers as equally productive
  // neutral helpers. Their shared 5% speed gain belongs to this helper's contribution.
@@ -113,8 +115,8 @@ function random(seed){let x=seed||1;return()=>{x^=x<<13;x^=x>>>17;x^=x<<5;return
 function randIng(p,r){const o={};["0","30","60"].forEach(k=>{const a=p.ingredients[k]||[];if(a.length)o[k]=a[Math.floor(r()*a.length)].id});return o}
 function key(c){return[c.pokemonId,c.level,c.mainSkillLevel,c.collectionHours,c.favoriteBerry?1:0,c.teamHelpingBonus||0,c.ingredientTarget||"",c.versatileSkill||""].join("|")}
 function distribution(c){
- const k0=key(c);if(CACHE.has(k0))return CACHE.get(k0);const p=mon(c.pokemonId),sc=scorer(c),r=random(hash(k0)),ids=D.subskills.map(x=>x.id),k=activeCount(c.level),a=new Array(SAMPLE);
- for(let i=0;i<SAMPLE;i++){const pool=ids.slice();for(let j=0;j<k;j++){const z=j+Math.floor(r()*(pool.length-j));[pool[j],pool[z]]=[pool[z],pool[j]]}a[i]=sc.score({...c,natureId:D.natures[Math.floor(r()*D.natures.length)].id,subskills:pool.slice(0,k),ingredients:randIng(p,r)})}
+ const k0=key(c);if(CACHE.has(k0))return CACHE.get(k0);const p=mon(c.pokemonId),sc=scorer(c),r=random(hash(k0)),ids=D.subskills.map(x=>x.id),k=activeCount(c.level),natureless=!hasNature(p),a=new Array(SAMPLE);
+ for(let i=0;i<SAMPLE;i++){const pool=ids.slice();for(let j=0;j<k;j++){const z=j+Math.floor(r()*(pool.length-j));[pool[j],pool[z]]=[pool[z],pool[j]]}a[i]=sc.score({...c,natureId:natureless?"HARDY":D.natures[Math.floor(r()*D.natures.length)].id,subskills:pool.slice(0,k),ingredients:randIng(p,r)})}
  a.sort((x,y)=>x-y);if(CACHE.size>=18)CACHE.delete(CACHE.keys().next().value);CACHE.set(k0,a);return a;
 }
 function lower(a,v){let l=0,h=a.length;while(l<h){const m=l+h>>>1;if(a[m]<v)l=m+1;else h=m}return l}
@@ -173,7 +175,7 @@ function berryFindingImpact(c,level=c.level){
 }
 function insights(c,report){
  const p=mon(c.pokemonId);if(!p)throw Error("포켓몬을 찾을 수 없습니다.");
- const r=report||analyze(c),m=r.metrics,n=nat(c.natureId),active=new Set(m.activeSubskills),selected=(c.subskills||[]).slice(0,5),good=[],issues=[];
+ const r=report||analyze(c),m=r.metrics,n=nat(hasNature(p)?c.natureId:"HARDY"),active=new Set(m.activeSubskills),selected=(c.subskills||[]).slice(0,5),good=[],issues=[];
  const skillFocused=p.specialty==="skill"||p.specialty==="all",berryImpact=active.has("BFS")?berryFindingImpact(c):null,add=(priority,key,text)=>{if(!issues.some(x=>x.key===key))issues.push({priority,key,text})};
  if(berryImpact){
   const gain=Math.round(berryImpact.berryEnergyGain).toLocaleString("ko-KR"),pct=berryImpact.berryGainPct.toFixed(0);
@@ -185,18 +187,22 @@ function insights(c,report){
  if((active.has("STM")||active.has("STS"))&&skillFocused)good.push("스킬 확률 옵션이 메인 스킬 발동을 안정적으로 늘립니다.");
  if((active.has("IFM")||active.has("IFS"))&&p.specialty==="ingredient")good.push("식재료 확률 옵션이 식재료 타입의 본업과 정확히 맞습니다.");
  if((active.has("INVL")||active.has("INVM"))&&+c.collectionHours>=4&&p.specialty!=="berry")good.push("소지수 증가가 장시간 미접속 손실을 줄입니다.");
- if(n.up==="speed")good.push("속도 상승 성격은 거의 모든 역할에서 확실한 가점입니다.");
- if(n.up==="skill"&&skillFocused)good.push("스킬 상승 성격이 본업과 맞습니다.");
- if(n.up==="ingredient"&&p.specialty==="ingredient")good.push("식재료 상승 성격이 식재료 생산량을 직접 높입니다.");
- if(n.up==="neutral")good.push("무보정 성격이라 본업을 직접 깎는 성격 감점은 없습니다.");
+ if(hasNature(p)){
+  if(n.up==="speed")good.push("속도 상승 성격은 거의 모든 역할에서 확실한 가점입니다.");
+  if(n.up==="skill"&&skillFocused)good.push("스킬 상승 성격이 본업과 맞습니다.");
+  if(n.up==="ingredient"&&p.specialty==="ingredient")good.push("식재료 상승 성격이 식재료 생산량을 직접 높입니다.");
+  if(n.up==="neutral")good.push("무보정 성격이라 본업을 직접 깎는 성격 감점은 없습니다.");
+ }
  if(m.effectiveSkillLevel>=7&&skillFocused)good.push("실효 메인 스킬이 최대 Lv.7이라 1회 발동 효과를 온전히 냅니다.");
 
  let harmfulNature=false;
- if(n.down==="speed"){add(100,"nature","속도 하락 성격은 모든 생산과 발동 횟수를 깎는 큰 감점입니다.");harmfulNature=true}
- else if(n.down==="skill"&&skillFocused){add(98,"nature","스킬 확률 하락 성격은 이 포켓몬의 본업을 직접 망가뜨립니다.");harmfulNature=true}
- else if(n.down==="ingredient"&&p.specialty==="ingredient"){add(98,"nature","식재료 확률 하락 성격이라 식재료형으로서는 치명적입니다.");harmfulNature=true}
- else if(n.down==="energy"){add(62,"nature-energy","기운 회복 하락 성격은 하루 도움 횟수의 안정성을 조금 낮춥니다.");harmfulNature=true}
- else if(n.down==="exp")add(38,"nature-exp","EXP 하락 성격은 완성 성능을 깎지는 않지만 육성 시간이 더 듭니다.");
+ if(hasNature(p)){
+  if(n.down==="speed"){add(100,"nature","속도 하락 성격은 모든 생산과 발동 횟수를 깎는 큰 감점입니다.");harmfulNature=true}
+  else if(n.down==="skill"&&skillFocused){add(98,"nature","스킬 확률 하락 성격은 이 포켓몬의 본업을 직접 망가뜨립니다.");harmfulNature=true}
+  else if(n.down==="ingredient"&&p.specialty==="ingredient"){add(98,"nature","식재료 확률 하락 성격이라 식재료형으로서는 치명적입니다.");harmfulNature=true}
+  else if(n.down==="energy"){add(62,"nature-energy","기운 회복 하락 성격은 하루 도움 횟수의 안정성을 조금 낮춥니다.");harmfulNature=true}
+  else if(n.down==="exp")add(38,"nature-exp","EXP 하락 성격은 완성 성능을 깎지는 않지만 육성 시간이 더 듭니다.");
+ }
 
  const coreGap=(ids,key,label,priority)=>{
   if(ids.some(id=>active.has(id)))return;
@@ -221,7 +227,7 @@ function insights(c,report){
  if(m.reliability<.95)add(70+(1-m.reliability)*50,"inventory","약 "+m.fillHours.toFixed(1)+"시간이면 소지품이 차서 설정한 "+c.collectionHours+"시간 수확 주기에서 효율이 "+Math.round(m.reliability*100)+"%까지 떨어집니다.");
  if(p.specialty==="ingredient"&&r.ingredientLine.combinations>1&&r.ingredientLine.topPct>50)add(58,"ingredient-line","식재료 구성만 비교하면 상위 "+r.ingredientLine.topPct.toFixed(1)+"%로, 같은 종의 좋은 식재료 조합보다 불리합니다.");
 
- if(!harmfulNature){const change=bestNatureChange(c),best=nat(change.id);if(change.id!==c.natureId&&change.gain>=1)add(60+Math.min(20,change.gain),"nature-opportunity",n.ko+" 성격보다 "+best.ko+" 성격이면 현재 역할 점수가 약 "+change.gain.toFixed(1)+"% 높습니다.")}
+ if(hasNature(p)&&!harmfulNature){const change=bestNatureChange(c),best=nat(change.id);if(change.id!==c.natureId&&change.gain>=1)add(60+Math.min(20,change.gain),"nature-opportunity",n.ko+" 성격보다 "+best.ko+" 성격이면 현재 역할 점수가 약 "+change.gain.toFixed(1)+"% 높습니다.")}
  const currentSwap=bestSubskillChange(c,c.level),futureSwap=c.level<80?bestSubskillChange(c,80):currentSwap;
  const swap=[currentSwap,futureSwap].filter(Boolean).sort((x,y)=>y.gain-x.gain)[0];
  if(swap&&swap.gain>=1)add(64+Math.min(18,swap.gain),"subskill-swap","Lv."+swap.level+"의 "+subName(swap.from)+" 대신 "+subName(swap.to)+"이면 "+(swap.level>c.level?"Lv.80 ":"현재 ")+"역할 점수가 약 "+swap.gain.toFixed(1)+"% 높습니다.");
@@ -235,5 +241,5 @@ function insights(c,report){
 }
 function analyze(c){const p=mon(c.pokemonId);if(!p)throw Error("올바른 포켓몬을 선택해 주세요.");const current=rank(c),futureConfig={...c,level:80},future=rank(futureConfig);return{pokemon:p,role:role(p,c.versatileSkill),current,future,metrics:metrics(c),futureMetrics:metrics(futureConfig),ingredientLine:ingredientRank(futureConfig),species:speciesRank(c),verdict:verdict(current.topPct)}}
 function defaultConfig(id="RALTS"){const p=mon(id)||D.pokemon[0];return{pokemonId:p.id,level:70,mainSkillLevel:1,natureId:"HARDY",subskills:["HB","STM","HSM","INVL","BFS"],ingredients:defaultIngredients(p),collectionHours:4,favoriteBerry:false,teamHelpingBonus:0,ingredientTarget:"",versatileSkill:"Metronome"}}
-root.SleepGraderEngine={analyze,metrics,getInsights:insights,getBerryFindingImpact:berryFindingImpact,placeSubskill,rankCandidate:rank,gradeFromTop:grade,getPokemon:mon,getNature:nat,getRole:role,getSkillRate:skillRate,versatileOptions:VERSATILE_OPTIONS,defaultConfig,defaultIngredientIds:defaultIngredients,activeCount,version:"1.5.0"};
+root.SleepGraderEngine={analyze,metrics,getInsights:insights,getBerryFindingImpact:berryFindingImpact,placeSubskill,rankCandidate:rank,gradeFromTop:grade,getPokemon:mon,getNature:nat,getRole:role,getSkillRate:skillRate,hasNature,versatileOptions:VERSATILE_OPTIONS,defaultConfig,defaultIngredientIds:defaultIngredients,activeCount,version:"1.6.0"};
 })(globalThis);
