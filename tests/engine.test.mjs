@@ -58,3 +58,32 @@ test("shortcomings react to nature, subskills, ingredients, and main-skill level
     assert.notDeepEqual(E.getInsights(a,E.analyze(a)).bad,E.getInsights(b,E.analyze(b)).bad);
   }
 });
+test("Berry Finding S is credited on non-berry specialists without a blanket swap recommendation",()=>{
+  const healer={...E.defaultConfig("GARDEVOIR"),level:70,mainSkillLevel:7,collectionHours:4,subskills:["HB","HSM","STM","BFS","STS"]};
+  const impact=E.getBerryFindingImpact(healer),notes=E.getInsights(healer,E.analyze(healer));
+  assert.equal(impact.berryGainPct,100);
+  assert.ok(impact.berryEnergyGain>0);
+  assert.ok(notes.good.some(x=>x.includes("나무열매 수 S")&&x.includes("열매 기초에너지")));
+  assert.ok(notes.bad.every(x=>!x.includes("나무열매 수 S 대신")));
+  const favorite=E.getBerryFindingImpact({...healer,favoriteBerry:true});
+  assert.ok(Math.abs(favorite.berryEnergyGain-impact.berryEnergyGain*2)<1e-6);
+
+  const mew={...healer,pokemonId:"MEW",versatileSkill:"BerryBurst",collectionHours:1};
+  const mewImpact=E.getBerryFindingImpact(mew),plain=E.metrics({...mew,subskills:mew.subskills.map(id=>id==="BFS"?"":id)}),withBerry=E.metrics(mew);
+  assert.ok(Math.abs(mewImpact.berryGainPct-50)<1e-6);
+  assert.equal(withBerry.skillProcsDay,plain.skillProcsDay);
+  assert.ok(E.getInsights(mew,E.analyze(mew)).good.some(x=>x.includes("메인 스킬의 발동 효과가 아닌")));
+
+  const future={...healer,level:25};
+  assert.equal(E.getBerryFindingImpact(future),null);
+});
+test("Berry Finding S inventory warning depends on measured impact, not species or hours alone",()=>{
+  const base={...E.defaultConfig("DRAGONITE"),level:70,mainSkillLevel:6,subskills:["HB","HSM","BFS","INVL","REB"]};
+  const frequent={...base,collectionHours:4},overnight={...base,collectionHours:8};
+  const frequentNotes=E.getInsights(frequent,E.analyze(frequent)),overnightNotes=E.getInsights(overnight,E.analyze(overnight));
+  assert.equal(E.getBerryFindingImpact(frequent).ingredientLossPct,0);
+  assert.ok(E.getBerryFindingImpact(overnight).ingredientLossPct>2);
+  assert.ok(frequentNotes.bad.every(x=>!x.includes("나무열매 수 S로 소지품이")));
+  assert.ok(overnightNotes.bad.some(x=>x.includes("나무열매 수 S로 소지품이")&&x.includes("식재료 생산")));
+  assert.ok(overnightNotes.good.some(x=>x.includes("나무열매 수 S")&&x.includes("열매 기초에너지")));
+});

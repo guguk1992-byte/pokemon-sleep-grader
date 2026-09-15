@@ -123,8 +123,11 @@ function bestNatureChange(c){
  return{...best,gain:gainPct(base,best.value)};
 }
 function bestSubskillChange(c,level){
- const x={...c,level},sc=scorer(x),base=sc.score(x),selected=(c.subskills||[]).slice(0,5),count=activeCount(level);let best=null;
+ const x={...c,level},p=mon(c.pokemonId),sc=scorer(x),base=sc.score(x),selected=(c.subskills||[]).slice(0,5),count=activeCount(level);let best=null;
  for(let slot=0;slot<count;slot++)for(const candidate of D.subskills){
+  // A non-berry specialist's BFS is a second source of berry energy, not an empty role slot.
+  // Compare its berry/skill tradeoff separately instead of recommending a one-axis swap.
+  if(selected[slot]==="BFS"&&p.specialty!=="berry")continue;
   if(candidate.id===selected[slot]||selected.includes(candidate.id))continue;
   const next=selected.slice();next[slot]=candidate.id;const value=sc.score({...x,subskills:next});
   if(!best||value>best.value)best={slot,from:selected[slot],to:candidate.id,value};
@@ -140,13 +143,31 @@ function bestIngredientChange(c){
  }
  return best?{...best,gain:gainPct(base,best.value),level:best.key==="0"?1:+best.key}:null;
 }
+function berryFindingImpact(c,level=c.level){
+ const p=mon(c.pokemonId);if(!p)throw Error("포켓몬을 찾을 수 없습니다.");
+ const slot=(c.subskills||[]).indexOf("BFS");
+ if(slot<0||D.unlocks[slot]>level)return null;
+ const x={...c,level},withBerry=metrics(x),withoutBerry=metrics({...x,subskills:c.subskills.map(id=>id==="BFS"?"":id)});
+ const percentage=(a,b)=>b>0?Math.max(0,(b-a)/b*100):0;
+ return{
+  berryEnergyGain:withBerry.berryStrengthDay-withoutBerry.berryStrengthDay,
+  berryGainPct:gainPct(withoutBerry.berryStrengthDay,withBerry.berryStrengthDay),
+  skillLossPct:percentage(withBerry.skillProcsDay,withoutBerry.skillProcsDay),
+  ingredientLossPct:percentage(withBerry.ingredientStrengthDay,withoutBerry.ingredientStrengthDay),
+  fillHours:withBerry.fillHours,fillHoursWithout:withoutBerry.fillHours
+ };
+}
 function insights(c,report){
  const p=mon(c.pokemonId);if(!p)throw Error("포켓몬을 찾을 수 없습니다.");
  const r=report||analyze(c),m=r.metrics,n=nat(c.natureId),active=new Set(m.activeSubskills),selected=(c.subskills||[]).slice(0,5),good=[],issues=[];
- const skillFocused=p.specialty==="skill"||p.specialty==="all",add=(priority,key,text)=>{if(!issues.some(x=>x.key===key))issues.push({priority,key,text})};
+ const skillFocused=p.specialty==="skill"||p.specialty==="all",berryImpact=active.has("BFS")?berryFindingImpact(c):null,add=(priority,key,text)=>{if(!issues.some(x=>x.key===key))issues.push({priority,key,text})};
+ if(berryImpact){
+  const gain=Math.round(berryImpact.berryEnergyGain).toLocaleString("ko-KR"),pct=berryImpact.berryGainPct.toFixed(0);
+  const source=r.role.category==="berrySkill"?"메인 스킬의 발동 효과가 아닌 일반 도움의 나무열매를 늘려":"일반 도움으로 얻는 나무열매를 늘려";
+  good.push("나무열매 수 S는 "+source+" 열매 기초에너지 약 "+gain+"/일(+"+pct+"%)을 더 얻습니다"+(c.favoriteBerry?"(좋아하는 나무열매 2배 반영)":"")+". 스킬 확률과는 별개로 실제 열매 기여가 있습니다.");
+ }
  if(active.has("HB"))good.push("도우미 보너스가 본인과 팀 4마리의 생산성을 함께 올립니다.");
  if(active.has("HSM"))good.push("도우미 스피드 M으로 모든 생산과 스킬 판정이 크게 늘어납니다.");
- if(active.has("BFS")&&(p.specialty==="berry"||r.role.category==="berrySkill"))good.push("나무열매 수 S가 이 역할의 핵심 화력을 직접 끌어올립니다.");
  if((active.has("STM")||active.has("STS"))&&skillFocused)good.push("스킬 확률 옵션이 메인 스킬 발동을 안정적으로 늘립니다.");
  if((active.has("IFM")||active.has("IFS"))&&p.specialty==="ingredient")good.push("식재료 확률 옵션이 식재료 타입의 본업과 정확히 맞습니다.");
  if((active.has("INVL")||active.has("INVM"))&&+c.collectionHours>=4&&p.specialty!=="berry")good.push("소지수 증가가 장시간 미접속 손실을 줄입니다.");
@@ -173,11 +194,15 @@ function insights(c,report){
  else{
   if(p.specialty==="berry")coreGap(["BFS"],"core-berry","나무열매 수 S",88);
   if(p.specialty==="ingredient")coreGap(["IFM","IFS"],"core-ingredient","식재료 확률 업",86);
-  if(skillFocused)coreGap(["STM","STS"],"core-skill","스킬 확률 업",90);
+  if(skillFocused&&active.has("BFS")&&!active.has("STM")&&!active.has("STS"))add(80,"core-skill","스킬 확률 업은 없어 메인 스킬 발동 자체는 더 높일 수 있지만, 나무열매 수 S의 열매 이득과 별개로 비교해야 합니다.");
+  else if(skillFocused)coreGap(["STM","STS"],"core-skill","스킬 확률 업",90);
   coreGap(["HSM","HSS","HB"],"core-speed","속도 보정",72);
  }
  if(skillFocused&&m.effectiveSkillLevel<7)add(78-m.effectiveSkillLevel*2,"skill-level","실효 메인 스킬이 Lv."+m.effectiveSkillLevel+"이라 Lv.7 대비 1회 발동 효과가 낮습니다.");
- if(active.has("BFS")&&p.specialty==="ingredient"&&+c.collectionHours>=8)add(82,"bfs-inventory","나무열매 수 S가 소지품을 빨리 채워 밤샘 식재료 생산을 방해할 수 있습니다.");
+ if(berryImpact&&p.specialty!=="berry"&&(berryImpact.skillLossPct>=2||berryImpact.ingredientLossPct>=2)){
+  const loss=skillFocused?berryImpact.skillLossPct:berryImpact.ingredientLossPct,label=skillFocused?"스킬 발동":"식재료 생산";
+  if(loss>=2)add(82,"bfs-inventory","앱 확인 주기 "+c.collectionHours+"시간에서는 나무열매 수 S로 소지품이 약 "+berryImpact.fillHours.toFixed(1)+"시간 만에 차면서 "+label+"이 약 "+loss.toFixed(1)+"% 감소할 수 있습니다. 열매 이득도 있으니 확인 주기·소지수와 함께 보세요.");
+ }
  if(["REB","DSB","SEB"].filter(x=>active.has(x)).length>=2)add(70,"indirect","현재 열린 칸에 직접 성능을 올리지 않는 보너스가 많습니다.");
  if(m.reliability<.95)add(70+(1-m.reliability)*50,"inventory","약 "+m.fillHours.toFixed(1)+"시간이면 소지품이 차서 설정한 "+c.collectionHours+"시간 수확 주기에서 효율이 "+Math.round(m.reliability*100)+"%까지 떨어집니다.");
  if(p.specialty==="ingredient"&&r.ingredientLine.combinations>1&&r.ingredientLine.topPct>50)add(58,"ingredient-line","식재료 구성만 비교하면 상위 "+r.ingredientLine.topPct.toFixed(1)+"%로, 같은 종의 좋은 식재료 조합보다 불리합니다.");
@@ -196,5 +221,5 @@ function insights(c,report){
 }
 function analyze(c){const p=mon(c.pokemonId);if(!p)throw Error("올바른 포켓몬을 선택해 주세요.");const current=rank(c),futureConfig={...c,level:80},future=rank(futureConfig);return{pokemon:p,role:role(p,c.versatileSkill),current,future,metrics:metrics(c),futureMetrics:metrics(futureConfig),ingredientLine:ingredientRank(futureConfig),species:speciesRank(c),verdict:verdict(current.topPct)}}
 function defaultConfig(id="RALTS"){const p=mon(id)||D.pokemon[0];return{pokemonId:p.id,level:70,mainSkillLevel:1,natureId:"HARDY",subskills:["HB","STM","HSM","INVL","BFS"],ingredients:defaultIngredients(p),collectionHours:4,favoriteBerry:false,teamHelpingBonus:0,ingredientTarget:"",versatileSkill:"Metronome"}}
-root.SleepGraderEngine={analyze,metrics,getInsights:insights,rankCandidate:rank,gradeFromTop:grade,getPokemon:mon,getNature:nat,getRole:role,getSkillRate:skillRate,versatileOptions:VERSATILE_OPTIONS,defaultConfig,defaultIngredientIds:defaultIngredients,activeCount,version:"1.2.0"};
+root.SleepGraderEngine={analyze,metrics,getInsights:insights,getBerryFindingImpact:berryFindingImpact,rankCandidate:rank,gradeFromTop:grade,getPokemon:mon,getNature:nat,getRole:role,getSkillRate:skillRate,versatileOptions:VERSATILE_OPTIONS,defaultConfig,defaultIngredientIds:defaultIngredients,activeCount,version:"1.3.0"};
 })(globalThis);
