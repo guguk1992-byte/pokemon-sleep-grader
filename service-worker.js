@@ -1,6 +1,6 @@
 "use strict";
 
-const CACHE_NAME="pokemon-sleep-grader-v7";
+const CACHE_NAME="pokemon-sleep-grader-v8";
 const APP_SHELL=[
   "./",
   "./index.html",

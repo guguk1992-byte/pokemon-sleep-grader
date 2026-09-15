@@ -25,9 +25,12 @@ test("exact level and unlock-level shortcuts are present and cached for offline 
   assert.match(css,/\.subskill-row\.locked\{opacity:1/);
 });
 test("Helping Bonus team-model assumptions are visible and cached app files refresh",()=>{
-  assert.match(html,/class="team-model-note"[^>]*>도우미 보너스의 팀 가치는 팀원 4마리/);
+  assert.doesNotMatch(html,/class="team-model-note"/);
+  assert.match(app,/el\.result\.querySelector\("\.result-footnote"\)\.append\(caveat\)/);
+  assert.match(app,/caveat\.textContent="도우미 보너스의 팀 가치는 팀원 4마리/);
+  assert.match(css,/\.result-footnote \.team-footnote\{[^}]*font-size:inherit/);
   assert.match(html,/35% 상한/);
-  assert.match(serviceWorker,/pokemon-sleep-grader-v7/);
+  assert.match(serviceWorker,/pokemon-sleep-grader-v8/);
   assert.match(serviceWorker,/"\.\/engine\.js"/);
 });
 
@@ -49,18 +52,31 @@ function appHarness(){
   ["ingredient0","ingredient30","ingredient60"].forEach((id,i)=>{ingredientBoxes[i].status=makeElement();ingredientBoxes[i].querySelector=()=>ingredientBoxes[i].status;elements[id].closest=()=>ingredientBoxes[i]});
   const marks=[1,30,60,80].map(value=>{const element=makeElement();element.dataset.value=String(value);return element});
   const shortcuts=[...html.matchAll(/<button type="button" data-level="(\d+)"/g)].map(x=>{const element=makeElement();element.dataset.level=x[1];return element});
-  const saved=new Map();
+  const saved=new Map(),timers=new Map(),footnote=makeElement();let nextTimer=0;
+  elements.resultContent.querySelector=selector=>{
+    assert.equal(selector,".result-footnote");
+    assert.match(elements.resultContent.innerHTML,/class="result-footnote"/);
+    return footnote;
+  };
   const context={
     PSG_DATA:globalThis.PSG_DATA,SleepGraderEngine:globalThis.SleepGraderEngine,
     document:{querySelector(selector){return elements[selector.slice(1)]},querySelectorAll(selector){return selector===".subskill-select"?subs:selector===".range-marks span"?marks:selector===".level-shortcuts button"?shortcuts:[]},createElement(){return makeElement()}},
     Option:function Option(text,value){return{text,value,disabled:false}},
     localStorage:{getItem(key){return saved.get(key)||null},setItem(key,value){saved.set(key,value)},removeItem(key){saved.delete(key)}},
     location:{hash:"",pathname:"/",search:"",href:"https://example.test/"},history:{replaceState(){}},navigator:{},
-    matchMedia(){return{matches:false}},addEventListener(){},setTimeout(){return 0},clearTimeout(){}
+    matchMedia(){return{matches:false}},addEventListener(){},setTimeout(fn){const id=++nextTimer;timers.set(id,fn);return id},clearTimeout(id){timers.delete(id)}
   };
   runInNewContext(app,context,{filename:"app.js"});
-  return{elements,subs,rows,shortcuts,getSaved:()=>JSON.parse(saved.get("psg-config"))};
+  return{elements,subs,rows,shortcuts,footnote,renderPending(){const callbacks=[...timers.values()];timers.clear();callbacks.forEach(fn=>fn())},getSaved:()=>JSON.parse(saved.get("psg-config"))};
 }
+
+test("the team assumption renders inside the existing verdict footnote",()=>{
+  const ui=appHarness();ui.renderPending();
+  assert.equal(ui.elements.resultContent.hidden,false);
+  assert.equal(ui.footnote.options.length,1);
+  assert.equal(ui.footnote.options[0].className,"team-footnote");
+  assert.match(ui.footnote.options[0].textContent,/팀원 4마리의 생산성이 같고 속도 상한에 닿지 않았다고 가정/);
+});
 
 test("changing Pokémon never requires erasing the previously selected name",()=>{
   const ui=appHarness(),search=ui.elements.pokemonSearch;

@@ -15,5 +15,5 @@
 .subskill-row.locked .unlock-state{color:#a6b8c5}
 .subskill-row .unlock-state{white-space:nowrap}
 fieldset legend small{text-align:right;line-height:1.45}
-.team-model-note{margin:16px 0 0;color:var(--muted);font-size:11px;line-height:1.6}
+.result-footnote .team-footnote{margin:8px 0 0;color:inherit;font-size:inherit;line-height:inherit}
 @media(max-width:720px){.level-field{margin-bottom:22px}}
